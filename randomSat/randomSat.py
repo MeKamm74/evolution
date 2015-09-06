@@ -11,29 +11,45 @@ if len(sys.argv) > 1:
 else:
     config = open('default.cfg', 'r')
 
-cnfFile = config.readline().split(': ')[1]
-seed = config.readline().split(': ')[1]
-evals = config.readline().split(': ')[1]
-runs = config.readline().split(': ')[1]
-logFile = config.readline().split(': ')[1]
-solFile = config.readline().split(': ')[1]
+cnfFile = config.readline().split()[1]
+seed = config.readline().split()[1]
+evals = int(config.readline().split()[1])
+runs = int(config.readline().split()[1])
+logFile = config.readline().split()[1]
+solFile = config.readline().split()[1]
 
 f = open(cnfFile, 'r')
 log = open(logFile, 'w')
 sol = open(solFile, 'w')
 
-firstLine = f.readline()
+current_time = time.mktime(datetime.datetime.now().timetuple())
 
-numVarsAndClauses = map(int, re.findall(r'\d+', firstLine))
+if seed == "null":
+    seed = current_time
+
+random.seed(seed)
+
+log.write("CNF File Name: ")
+log.write(cnfFile)
+log.write("\nRandom number seed value: ")
+log.write(str(seed))
+log.write("\nNumber of runs: ")
+log.write(str(runs))
+log.write("\nNumber of fitness evaluations per run: ")
+log.write(str(evals))
+log.write("\n\nResults log\n")
 
 currentRun = 0
 fitness = 0
-current_time = time.mktime(datetime.datetime.now()).total_seconds
-random.seed(current_time)
-
-for run in range(1, runs):
+highestTotalFitness = 0
+for run in range(1, runs+1):
     currentEval = 0
-    while currnetEval <= evals:
+    highestFitness = 0
+    f.seek(0)
+    log.write("\nRun ")
+    log.write(str(run))
+    log.write("\n")
+    while currentEval <= evals:
         currentEval+=1
 
         fitness = 0
@@ -42,7 +58,7 @@ for run in range(1, runs):
             words = line.split(' ')
 
             if words[0] == 'p':           
-                numVarsAndClauses = map(int, re.findall(r'\d+', firstLine))
+                numVarsAndClauses = map(int, re.findall(r'\d+', line))
                 solution = []
                 for i in range(0, numVarsAndClauses[0]):
                     solution.append(bool(random.getrandbits(1)))
@@ -62,9 +78,39 @@ for run in range(1, runs):
                         fitness+=1
                         break
 
-
-
         print "Eval: ", currentEval
         print "Fitness: ", fitness
 
-    f.close()
+        if fitness > highestFitness:
+            log.write(str(currentEval))
+            log.write("\t")
+            log.write(str(fitness))
+            log.write("\n")
+            
+            bestSolution = solution
+
+            highestFitness = fitness
+
+        if fitness == numVarsAndClauses[1]:
+            break
+
+    if highestFitness > highestTotalFitness:
+        bestTotalSolution = bestSolution
+        highestTotalFitness = highestFitness
+
+sol.write("c Solution for: ")
+sol.write(cnfFile)
+sol.write("\nc MAXSAT fitness value: ")
+sol.write(str(highestTotalFitness))
+sol.write("\nv ")
+
+for i in range(0, len(bestTotalSolution)):
+    if bestTotalSolution[i] == False:
+        sol.write("-")
+    sol.write(str(i+1))
+    sol.write(" ")
+    
+config.close()  
+log.close()
+sol.close()
+f.close()
