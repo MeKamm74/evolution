@@ -78,9 +78,6 @@ for run in range(1, runs+1):
                         fitness+=1
                         break
 
-        print "Eval: ", currentEval
-        print "Fitness: ", fitness
-
         if fitness > highestFitness:
             log.write(str(currentEval))
             log.write("\t")
@@ -109,7 +106,7 @@ for i in range(0, len(bestTotalSolution)):
         sol.write("-")
     sol.write(str(i+1))
     sol.write(" ")
-    
+
 config.close()  
 log.close()
 sol.close()
