@@ -1,27 +1,24 @@
 # Author: Michael Kammeyer
-# This file will read in cnf data and generate random solutions for it. 
 import re
 import sys
 import random
 import datetime
 import time
 
-
-class child:
-
+class Child:
     def __init__(self):
-        numVarsAndClauses = map(int, re.findall(r'\d+', line))
         self.solution = []
-        for i in range(0, numVarsAndClauses[0]):
-            self.solution.append(bool(random.getrandbits(1)))
-
         self.fitness = 0
+
+    def generateRandom(self, numVars):
+        for i in range(numVars):
+            self.solution.append(bool(random.getrandbits(1)))
 
     def evaluate(self, lines):
         for line in lines:
-            words = line.split(' ')
+            words = line.split()
 
-            if words[0] != 'c' && words[0] != p:
+            if words[0] != 'c' and words[0] != 'p':
                 currentLine = False
 
                 for word in words:
@@ -38,8 +35,26 @@ class child:
 
 def getFittest(children):
     best = 0
+    index = 0
     for i in range(0, len(children)):
         if children[i].fitness > best:
+            index = i
+
+    return index
+
+def getAverageFitness(children):
+    total = 0
+    for child in children:
+        total += child.fitness
+    avg = total/len(children)
+
+    return avg
+
+def getLeastFit(children):
+    worst = children[0].fitness
+    index = 0
+    for i in range(1, len(children)):
+        if children[i].fitness < worst:
             index = i
 
     return index
@@ -53,26 +68,33 @@ def getParents(children, k, lamda):
     for i in range(0, lamda):
         fittestIndex = getFittest(tournament)
         winners.append(tournament[fittestIndex])
-        tournament.pop[fittestIndex]
+        tournament.pop(fittestIndex)
 
     return winners
 
-def createChildren(children, winners):
-    
+def createChildren(children, parents, lines):
+    newChildren = []
+    for i in range(0, len(parents)):
+        child = Child()
+        child.solution.extend(parents[i].solution[0:len(parents[i].solution)/2])
+        child.solution.extend(parents[i*(-1)].solution[len(parents[i*(-1)].solution)/2:len(parents[i*(-1)].solution)])
+        child.evaluate(lines)
 
+        newChildren.append(child)
+
+    children.extend(newChildren)
+    return children
 
 def cutLosers(children, k, lamda):
-    tournament = []
-    for i in range(0, k):
-        tournament.append(children[random.randrange(0, len(children))])
-
-    winners = []
     for i in range(0, lamda):
-        fittestIndex = getFittest(tournament)
-        winners.append(tournament[fittestIndex])
-        tournament.pop[fittestIndex]
+        indexes = random.sample(range(0, len(children)), k)
+        tournament = []
+        for j in indexes:
+            tournament.append(children[j])
+        leastFitIndex = getLeastFit(tournament)
+        children.pop(indexes[leastFitIndex])
 
-    children.extend(winners)
+    return children
 
 
 if len(sys.argv) > 1:
@@ -86,6 +108,10 @@ evals = int(config.readline().split()[1])
 runs = int(config.readline().split()[1])
 logFile = config.readline().split()[1]
 solFile = config.readline().split()[1]
+population = int(config.readline().split()[1])
+lamda = int(config.readline().split()[1])
+if(bool(config.readline().split()[1])):
+    k = int(config.readline().split()[1])
 
 f = open(cnfFile, 'r')
 log = open(logFile, 'w')
@@ -109,42 +135,41 @@ log.write(str(evals))
 log.write("\n\nResults log\n")
 
 lines = []
-
 for line in f:
     lines.append(line)
 
-currentRun = 0
-fitness = 0
-highestTotalFitness = 0
-for run in range(1, runs+1):
-    currentEval = 0
-    highestFitness = 0
-    log.write("\nRun ")
-    log.write(str(run))
-    log.write("\n")
-    while currentEval <= evals:
-        currentEval+=1
+for line in lines:
+    if line[0] == 'p':
+        words = line.split()
+        numVars = int(words[2])
+        numClauses = int(words[3])
+        break
 
-        fitness = 0
+bestTotalSolution = 0
+for i in range(runs):
+    children = []
+    for j in range(population):
+        child = Child()
+        child.generateRandom(numVars)
+        child.evaluate(lines)
+        children.append(child)
 
-        evaluate(lines)
 
-        if fitness > highestFitness:
-            log.write(str(currentEval))
-            log.write("\t")
-            log.write(str(fitness))
-            log.write("\n")
-            
-            bestSolution = solution
-
-            highestFitness = fitness
-
-        if fitness == numVarsAndClauses[1]:
-            break
-
-    if highestFitness > highestTotalFitness:
-        bestTotalSolution = bestSolution
-        highestTotalFitness = highestFitness
+    terminate = False
+    evals = population
+    while(not terminate):
+        parents = getParents(children, k, lamda)
+        children = createChildren(children, parents, lines)
+        children = cutLosers(children, k, lamda)
+        evals+=lamda
+        best = getFittest(children)
+        bestSolution = children[best].solution
+        avg = getAverageFitness(children)
+        if evals >= 10000:
+            terminate = True
+        print "EVALS: " + str(evals)
+        print "AVG: " + str(avg)
+        print "BEST: " + str(children[best].fitness)
 
 sol.write("c Solution for: ")
 sol.write(cnfFile)
