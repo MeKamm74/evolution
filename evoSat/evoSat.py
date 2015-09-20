@@ -32,6 +32,12 @@ class Child:
                     if currentLine == True:
                         self.fitness+=1
                         break
+ 
+def copy(child):
+    newChild = Child()
+    newChild.solution = child.solution
+    newChild.fitness = child.fitness
+    return newChild
 
 def sumOfFitness(children):
     sum = 0
@@ -108,17 +114,28 @@ def createChildren(children, parents, lines):
     children.extend(newChildren)
     return children
 
-def cutLosers(children, k, lamda):
-    for i in range(0, lamda):
-        indexes = random.sample(range(0, len(children)), k)
-        tournament = []
-        for j in indexes:
-            tournament.append(children[j])
-        leastFitIndex = getLeastFit(tournament)
-        children.pop(indexes[leastFitIndex])
+def cutLosers(children, k, lamda, toTruncate):
+    if k:
+        for i in range(0, lamda):
+            indexes = random.sample(range(0, len(children)), k)
+            tournament = []
+            for j in indexes:
+                tournament.append(children[j])
+            leastFitIndex = getLeastFit(tournament)
+            children.pop(indexes[leastFitIndex])
 
-    return children
+        return children
 
+    else:
+        children.sort(key=lambda x: x.fitness)
+        toCut = population * toTruncate / 100
+        for i in range(0, toCut):
+            children.pop(i)
+        while len(children) < population:
+            for i in range(0, population-toCut):
+                children.append(copy(children[i]))
+
+        return children
 
 if len(sys.argv) > 1:
     config = open(sys.argv[1], 'r')
@@ -159,6 +176,8 @@ if survivalTournament == 'True':
 else:
     k_survival = 0
     config.readline()
+
+toTruncate = int(config.readline().split()[1])
 
 config.readline()
 config.readline()
@@ -221,7 +240,7 @@ for i in range(runs):
     while(not terminate):
         parents = getParents(children, k_parent, lamda)
         children = createChildren(children, parents, lines)
-        children = cutLosers(children, k_survival, lamda)
+        children = cutLosers(children, k_survival, lamda, toTruncate)
 
         numEvals+=lamda
         best = children[getFittest(children)].fitness
