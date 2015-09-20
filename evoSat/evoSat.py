@@ -33,12 +33,20 @@ class Child:
                         self.fitness+=1
                         break
 
+def sumOfFitness(children):
+    sum = 0
+    for child in children:
+        sum += child.fitness
+
+    return sum
+
 def getFittest(children):
     best = 0
     index = 0
     for i in range(0, len(children)):
         if children[i].fitness > best:
             index = i
+            best = children[i].fitness
 
     return index
 
@@ -60,17 +68,32 @@ def getLeastFit(children):
     return index
 
 def getParents(children, k, lamda):
-    tournament = []
-    for i in range(0, k):
-        tournament.append(children[random.randrange(0, len(children))])
+    if k:
+        tournament = []
+        for i in range(0, k):
+            tournament.append(children[random.randrange(0, len(children))])
 
-    winners = []
-    for i in range(0, lamda):
-        fittestIndex = getFittest(tournament)
-        winners.append(tournament[fittestIndex])
-        tournament.pop(fittestIndex)
+        parents = []
+        for i in range(0, lamda):
+            fittestIndex = getFittest(tournament)
+            parents.append(tournament[fittestIndex])
+            tournament.pop(fittestIndex)
 
-    return winners
+        return parents
+
+    else:
+        parents = []
+        totalFitness = sumOfFitness(children)
+        for i in range(lamda):
+            randomFitness = random.randrange(0, totalFitness)
+            counter = 0
+            for child in children:
+                counter+=child.fitness
+                if counter >= randomFitness:
+                    parents.append(child)
+                    break
+
+        return parents
 
 def createChildren(children, parents, lines):
     newChildren = []
@@ -104,14 +127,45 @@ else:
 
 cnfFile = config.readline().split()[1]
 seed = config.readline().split()[1]
-evals = int(config.readline().split()[1])
 runs = int(config.readline().split()[1])
 logFile = config.readline().split()[1]
 solFile = config.readline().split()[1]
+
+config.readline()
+config.readline()
+config.readline()
+
 population = int(config.readline().split()[1])
 lamda = int(config.readline().split()[1])
-if(bool(config.readline().split()[1])):
-    k = int(config.readline().split()[1])
+
+config.readline()
+config.readline()
+config.readline()
+
+parentTournament = config.readline().split()[1]
+if parentTournament == 'True':
+    k_parent = int(config.readline().split()[1])
+else:
+    k_parent = 0
+    config.readline()
+
+config.readline()
+config.readline()
+config.readline()
+
+survivalTournament = config.readline().split()[1]
+if survivalTournament == 'True':
+    k_survival = int(config.readline().split()[1])
+else:
+    k_survival = 0
+    config.readline()
+
+config.readline()
+config.readline()
+config.readline()
+
+evals = int(config.readline().split()[1])
+n = int(config.readline().split()[1])
 
 f = open(cnfFile, 'r')
 log = open(logFile, 'w')
@@ -132,7 +186,10 @@ log.write("\nNumber of runs: ")
 log.write(str(runs))
 log.write("\nNumber of fitness evaluations per run: ")
 log.write(str(evals))
-log.write("\n\nResults log\n")
+log.write("\nK value for survival: " + str(k_survival))
+log.write("\nK value for parents: " + str(k_parent))
+log.write("\nN convergence number: " + str(n))
+log.write("\n\nResults log\n\n")
 
 lines = []
 for line in f:
@@ -145,8 +202,8 @@ for line in lines:
         numClauses = int(words[3])
         break
 
-bestTotalSolution = 0
 for i in range(runs):
+    log.write("Run: " + str(i) + "\n")
     children = []
     for j in range(population):
         child = Child()
@@ -154,31 +211,56 @@ for i in range(runs):
         child.evaluate(lines)
         children.append(child)
 
-
+    bestTotalSolution = children[0]
     terminate = False
-    evals = population
+    numEvals = population
+    numAvg = 0
+    numBest = 0
+    prevAvg = 0
+    prevBest = 0
     while(not terminate):
-        parents = getParents(children, k, lamda)
+        parents = getParents(children, k_parent, lamda)
         children = createChildren(children, parents, lines)
-        children = cutLosers(children, k, lamda)
-        evals+=lamda
-        best = getFittest(children)
-        bestSolution = children[best].solution
+        children = cutLosers(children, k_survival, lamda)
+
+        numEvals+=lamda
+        best = children[getFittest(children)].fitness
+        bestSolution = children[getFittest(children)]
         avg = getAverageFitness(children)
-        if evals >= 10000:
+        
+        numAvg+=1
+        if avg != prevAvg:
+            prevAvg = avg
+            numAvg = 0
+
+        numBest+=1
+        if best != prevBest:
+            prevBest = best
+            numBest = 0
+
+        if numEvals >= evals:
             terminate = True
-        print "EVALS: " + str(evals)
-        print "AVG: " + str(avg)
-        print "BEST: " + str(children[best].fitness)
+        if n:
+            if numAvg >= n or numBest >= n:
+                terminate = True
+
+        log.write(str(numEvals) + "\t")
+        log.write(str(avg) + "\t")
+        log.write(str(best) + "\n")
+
+    if bestSolution.fitness > bestTotalSolution.fitness:
+        bestTotalSolution = bestSolution
+    
+    log.write("\n\n")
 
 sol.write("c Solution for: ")
 sol.write(cnfFile)
 sol.write("\nc MAXSAT fitness value: ")
-sol.write(str(highestTotalFitness))
+sol.write(str(bestTotalSolution.fitness))
 sol.write("\nv ")
 
-for i in range(0, len(bestTotalSolution)):
-    if bestTotalSolution[i] == False:
+for i in range(0, len(bestTotalSolution.solution)):
+    if bestTotalSolution.solution[i] == False:
         sol.write("-")
     sol.write(str(i+1))
     sol.write(" ")
