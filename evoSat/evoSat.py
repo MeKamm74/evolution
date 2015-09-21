@@ -205,6 +205,8 @@ log.write("\nNumber of runs: ")
 log.write(str(runs))
 log.write("\nNumber of fitness evaluations per run: ")
 log.write(str(evals))
+log.write("\nPopulation size: " + str(population))
+log.write("\nLambda: " + str(lamda))
 log.write("\nK value for survival: " + str(k_survival))
 log.write("\nK value for parents: " + str(k_parent))
 log.write("\nN convergence number: " + str(n))
@@ -230,9 +232,17 @@ for i in range(runs):
         child.evaluate(lines)
         children.append(child)
 
-    bestTotalSolution = children[0]
-    terminate = False
+    best = children[getFittest(children)].fitness
+    bestSolution = children[getFittest(children)]
+    avg = getAverageFitness(children)
     numEvals = population
+
+    log.write(str(numEvals) + "\t")
+    log.write(str(avg) + "\t")
+    log.write(str(best) + "\n")
+
+    bestTotalSolution = bestSolution
+    terminate = False
     numAvg = 0
     numBest = 0
     prevAvg = 0
