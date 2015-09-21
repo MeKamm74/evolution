@@ -1,19 +1,24 @@
 # Author: Michael Kammeyer
+# Assignment 1b
 import re
 import sys
 import random
 import datetime
 import time
 
+# Each child has a solution and a calculated fitness
 class Child:
+    #default constructor, creates an empty child
     def __init__(self):
         self.solution = []
         self.fitness = 0
 
+    #generates a random solution for the child
     def generateRandom(self, numVars):
         for i in range(numVars):
             self.solution.append(bool(random.getrandbits(1)))
 
+    #evaluates the child's solution and stores it in the fitness attribute
     def evaluate(self, lines):
         for line in lines:
             words = line.split()
@@ -32,13 +37,15 @@ class Child:
                     if currentLine == True:
                         self.fitness+=1
                         break
- 
+
+#Takes a child as a parameter, returns a copy of that child.
 def copy(child):
     newChild = Child()
     newChild.solution = child.solution
     newChild.fitness = child.fitness
     return newChild
 
+#Returns the sum of all fitnesses in a list of children
 def sumOfFitness(children):
     sum = 0
     for child in children:
@@ -46,6 +53,7 @@ def sumOfFitness(children):
 
     return sum
 
+#Takes a list of children, Returns the index of the child with the highest fitness
 def getFittest(children):
     best = 0
     index = 0
@@ -56,6 +64,7 @@ def getFittest(children):
 
     return index
 
+#Takes a list of children, Returns the average of all their fitnesses
 def getAverageFitness(children):
     total = 0
     for child in children:
@@ -63,7 +72,7 @@ def getAverageFitness(children):
     avg = total/len(children)
 
     return avg
-
+#Takes a list of children, Returns the index of the child with the lowest fitness
 def getLeastFit(children):
     worst = children[0].fitness
     index = 0
@@ -73,6 +82,7 @@ def getLeastFit(children):
 
     return index
 
+#uses either tournament or fitness proportional selection to return a list of children to use as parents
 def getParents(children, k, lamda):
     if k:
         tournament = []
@@ -101,6 +111,7 @@ def getParents(children, k, lamda):
 
         return parents
 
+#creates new children from the list of parents using recombination, evaluates them and adds them to list of children
 def createChildren(children, parents, lines):
     newChildren = []
     for i in range(0, len(parents)):
@@ -114,6 +125,7 @@ def createChildren(children, parents, lines):
     children.extend(newChildren)
     return children
 
+#uses either tournament or truncation for survival selection, removes children from the list
 def cutLosers(children, k, lamda, toTruncate):
     if k:
         for i in range(0, lamda):
@@ -137,6 +149,9 @@ def cutLosers(children, k, lamda, toTruncate):
 
         return children
 
+#################################################################
+# Main Script
+# Reading in config file
 if len(sys.argv) > 1:
     config = open(sys.argv[1], 'r')
 else:
@@ -190,6 +205,7 @@ f = open(cnfFile, 'r')
 log = open(logFile, 'w')
 sol = open(solFile, 'w')
 
+#Seed random
 current_time = time.mktime(datetime.datetime.now().timetuple())
 
 if seed == "null":
@@ -197,6 +213,7 @@ if seed == "null":
 
 random.seed(seed)
 
+#Write log header
 log.write("CNF File Name: ")
 log.write(cnfFile)
 log.write("\nRandom number seed value: ")
@@ -212,10 +229,12 @@ log.write("\nK value for parents: " + str(k_parent))
 log.write("\nN convergence number: " + str(n))
 log.write("\n\nResults log\n\n")
 
+#Store the cnf file
 lines = []
 for line in f:
     lines.append(line)
 
+#Find the number of variables and clauses needed
 for line in lines:
     if line[0] == 'p':
         words = line.split()
@@ -223,6 +242,7 @@ for line in lines:
         numClauses = int(words[3])
         break
 
+#Execute runs
 for i in range(runs):
     log.write("Run: " + str(i) + "\n")
     children = []
