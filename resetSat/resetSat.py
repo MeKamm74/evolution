@@ -38,6 +38,26 @@ class Child:
                         self.fitness+=1
                         break
 
+def generateSeed(seedFile, children, numVars):
+    seed = open(seedFile, 'r')
+    for line in seed:
+        words = line.split()
+        child = Child()
+        for word in words:
+            if int(word) > 0:
+                child.solution.append(True)
+            else:
+                child.solution.append(False)
+        child.evaluate(lines)
+        children.append(child)
+
+    for i in range(population - len(children)):
+        child = Child()
+        child.generateRandom(numVars)
+        children.append(child)
+
+    return children
+
 #Takes a child as a parameter, returns a copy of that child.
 def copy(child):
     newChild = Child()
@@ -50,6 +70,13 @@ def sumOfFitness(children):
     sum = 0
     for child in children:
         sum += child.fitness
+
+    return sum
+
+def inverseSumOfFitness(children):
+    sum = 0
+    for child in children:
+        sum += float(1/child.fitness)
 
     return sum
 
@@ -85,7 +112,11 @@ def getLeastFit(children):
 #uses either tournament or fitness proportional selection to return a list of children to use as parents
 def getParents(children, k, lamda):
     parents = []
-    if k:
+    if randomParent:
+        for i in range(0, lamda):
+            parents.append(children[random.randrange(0, len(children))])
+            
+    elif k:
         for j in range(0, lamda):  
             tournament = []
             for i in range(0, k):
@@ -93,8 +124,6 @@ def getParents(children, k, lamda):
 
             fittestIndex = getFittest(tournament)
             parents.append(tournament[fittestIndex])
-
-        return parents
 
     else:
         totalFitness = sumOfFitness(children)
@@ -106,8 +135,7 @@ def getParents(children, k, lamda):
                 if counter >= randomFitness:
                     parents.append(child)
                     break
-
-        return parents
+    return parents
 
 #creates new children from the list of parents using recombination, evaluates them and adds them to list of children
 def createChildren(children, parents, lines):
@@ -121,12 +149,25 @@ def createChildren(children, parents, lines):
 
         newChildren.append(child)
 
-    children.extend(newChildren)
+    if commaOrPlus == 'comma':
+        children = newChildren
+
+    else:
+        children.extend(newChildren)
+
     return children
 
 #uses either tournament or truncation for survival selection, removes children from the list
 def cutLosers(children, k, lamda):
-    if k:
+    if randomSurvival:
+        if commaOrPlus == "comma":
+            for i in range(lamda - population):
+                children.pop(random.randrange(0, len(children)))    
+        else:
+            for i in range(population - lamda):
+                children.pop(random.randrange(0, len(children)))
+
+    elif k:
         for i in range(0, lamda):
             indexes = random.sample(range(0, len(children)), k)
             tournament = []
@@ -137,12 +178,22 @@ def cutLosers(children, k, lamda):
 
         return children
 
+    elif fitnessSurvival:
+        totalFitness = inverseSumOfFitness(children)
+        for i in range(lamda):
+            randomFitness = random.randrange(0, totalFitness)
+            counter = 0
+            for child in children:
+                counter+=float(1/child.fitness)
+                if counter >= randomFitness:
+                    parents.append(child)
+                    break
     else:
         children.sort(key=lambda x: x.fitness)
         while len(children) > population:
             children.pop(children[0])
 
-        return children
+    return children
 
 #################################################################
 # Main Script
@@ -157,6 +208,7 @@ seed = config.readline().split()[1]
 runs = int(config.readline().split()[1])
 logFile = config.readline().split()[1]
 solFile = config.readline().split()[1]
+seedFile = config.readline().split()[1]
 
 config.readline()
 config.readline()
@@ -169,12 +221,21 @@ config.readline()
 config.readline()
 config.readline()
 
+commaOrPlus = config.readline().split()[1]
+
+config.readline()
+config.readline()
+config.readline()
+
 parentTournament = config.readline().split()[1]
 if parentTournament == 'True':
     k_parent = int(config.readline().split()[1])
 else:
     k_parent = 0
     config.readline()
+
+fitnessParent = bool(config.readline().split()[1])
+randomParent = bool(config.readline().split()[1])
 
 config.readline()
 config.readline()
@@ -187,12 +248,15 @@ else:
     k_survival = 0
     config.readline()
 
-toTruncate = int(config.readline().split()[1])
-
+truncate = bool(config.readline().split()[1])
+randomSurvival = bool(config.readline().split()[1])
+fitnessSurvival = bool(config.readline().split()[1])
 config.readline()
 config.readline()
 config.readline()
 
+restart = config.readline().split()[1]
+r = int(config.readline().split()[1]) 
 evals = int(config.readline().split()[1])
 n = int(config.readline().split()[1])
 
@@ -241,11 +305,16 @@ for line in lines:
 for i in range(runs):
     log.write("Run: " + str(i) + "\n")
     children = []
-    for j in range(population):
-        child = Child()
-        child.generateRandom(numVars)
-        child.evaluate(lines)
-        children.append(child)
+
+    if seedFile != "none":
+        generateSeed(seedFile, children, numVars)
+
+    else:    
+        for j in range(population):
+            child = Child()
+            child.generateRandom(numVars)
+            child.evaluate(lines)
+            children.append(child)
 
     best = children[getFittest(children)].fitness
     bestSolution = children[getFittest(children)]
@@ -258,11 +327,28 @@ for i in range(runs):
 
     bestTotalSolution = bestSolution
     terminate = False
+    reset = False
     numAvg = 0
     numBest = 0
     prevAvg = 0
     prevBest = 0
     while(not terminate):
+        if reset:
+            for j in range(population - r):
+                children.pop(getLeastFit(children))
+
+            reset = False
+            numAvg = 0
+            numBest = 0
+            prevAvg = 0
+            prevBest = 0
+            children = []
+            for j in range(population - r):
+                child = Child()
+                child.generateRandom(numVars)
+                child.evaluate(lines)
+                children.append(child)
+
         parents = getParents(children, k_parent, lamda)
         children = createChildren(children, parents, lines)
         children = cutLosers(children, k_survival, lamda)
@@ -284,9 +370,9 @@ for i in range(runs):
 
         if numEvals >= evals:
             terminate = True
-        if n:
+        if restart:
             if numAvg >= n or numBest >= n:
-                terminate = True
+                reset = True
 
         log.write(str(numEvals) + "\t")
         log.write(str(avg) + "\t")
