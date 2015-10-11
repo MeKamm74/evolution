@@ -98,7 +98,9 @@ def getAverageFitness(children):
         total += child.fitness
     avg = total/len(children)
 
+    mutationRate = 100*(float(avg/numClauses))
     return avg
+
 #Takes a list of children, Returns the index of the child with the lowest fitness
 def getLeastFit(children):
     worst = children[0].fitness
@@ -146,7 +148,7 @@ def createChildren(children, parents, lines):
         child.solution.extend(parents[i].solution[0:crossoverPoint])
         child.solution.extend(parents[i*(-1)].solution[crossoverPoint:len(parents[i*(-1)].solution)])
         child.evaluate(lines)
-
+        child = mutate(child)
         newChildren.append(child)
 
     if commaOrPlus == 'comma':
@@ -156,6 +158,13 @@ def createChildren(children, parents, lines):
         children.extend(newChildren)
 
     return children
+
+def mutate(child):
+    rand = random.randrange(0, 100)
+    if rand > mutationRate:
+        child.solution[random.randrange(0, len(child.solution))] = not child.solution[random.randrange(0, len(child.solution))]
+
+    return child
 
 #uses either tournament or truncation for survival selection, removes children from the list
 def cutLosers(children, k, lamda):
@@ -301,6 +310,8 @@ for line in lines:
         numClauses = int(words[3])
         break
 
+mutationRate = 75
+bestTotalSolution = Child()
 #Execute runs
 for i in range(runs):
     log.write("Run: " + str(i) + "\n")
@@ -325,7 +336,6 @@ for i in range(runs):
     log.write(str(avg) + "\t")
     log.write(str(best) + "\n")
 
-    bestTotalSolution = bestSolution
     terminate = False
     reset = False
     numAvg = 0
