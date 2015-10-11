@@ -98,7 +98,8 @@ def getAverageFitness(children):
         total += child.fitness
     avg = total/len(children)
 
-    mutationRate = 100*(float(avg/numClauses))
+    if adapt:
+        mutationRate = 100*(float(avg/numClauses))
     return avg
 
 #Takes a list of children, Returns the index of the child with the lowest fitness
@@ -231,6 +232,7 @@ config.readline()
 config.readline()
 
 commaOrPlus = config.readline().split()[1]
+adapt = bool(config.readline().split()[1])
 
 config.readline()
 config.readline()
@@ -310,7 +312,7 @@ for line in lines:
         numClauses = int(words[3])
         break
 
-mutationRate = 75
+mutationRate = 95
 bestTotalSolution = Child()
 #Execute runs
 for i in range(runs):
