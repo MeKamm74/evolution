@@ -294,6 +294,27 @@ log.write("\nNumber of fitness evaluations per run: ")
 log.write(str(evals))
 log.write("\nPopulation size: " + str(population))
 log.write("\nLambda: " + str(lamda))
+log.write("\nStrategy: " + commaOrPlus)
+log.write("\nSelf-Adaptivity: " + str(adapt))
+log.write("\nRestarts: " + str(restart))
+log.write("\nR-Elitism: " + str(r))
+
+if parentTournament == True:
+    log.write("\nParent Selection: Tournament")
+elif randomParent == True:
+    log.write("\nParent Selection: Random")
+elif fitnessParent == True:
+    log.write("\nParent Selection: Fitness proportional")
+
+if survivalTournament == True:
+    log.write("\nSurvival Selection: Tournament")
+elif randomSurvival == True:
+    log.write("\nSurvival Selection: Random")
+elif fitnessSurvival == True:
+    log.write("\nSurvival Selection: Fitness proportional")
+elif truncate == True:
+    log.write("\nSurvival Selection: Truncation")
+
 log.write("\nK value for survival: " + str(k_survival))
 log.write("\nK value for parents: " + str(k_parent))
 log.write("\nN convergence number: " + str(n))
