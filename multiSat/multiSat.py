@@ -80,7 +80,8 @@ def paretoSortChildren(children):
                 break
         current-=1
 
-    return children
+    bestFront = frontTable[0]
+    return children, bestFront
 
 def paretoSortChild(child, frontTable):
     if len(frontTable) == 0:
@@ -106,9 +107,9 @@ def paretoSortChild(child, frontTable):
                 done = True
                 break
             else:
-                frontTable[j].append(child)
-                done = True
-                break
+                if i == len(frontTable[j]) - 1:
+                    frontTable[j].append(child)
+                    done = True
 
         if done == True:
             break
@@ -188,23 +189,19 @@ def getAverageValuesNotUsed(children):
 
 def getMostCorrectClauses(children):
     best = 0
-    index = 0
     for i in range(0, len(children)):
         if children[i].correctClauses > best:
-            index = i
             best = children[i].correctClauses
 
-    return index
+    return best
 
 def getMostValuesNotUsed(children):
     best = 0
-    index = 0
     for i in range(0, len(children)):
         if children[i].valuesNotUsed > best:
-            index = i
             best = children[i].valuesNotUsed
 
-    return index
+    return best
 
 #Takes a list of children, Returns the index of the child with the lowest fitness
 def getLeastFit(children):
@@ -263,8 +260,8 @@ def createChildren(children, parents, lines):
     else:
         children.extend(newChildren)
 
-    children = paretoSortChildren(children)
-    return children
+    children, bestFront = paretoSortChildren(children)
+    return children, bestFront
 
 def mutate(child):
     rand = random.randrange(0, 100)
@@ -326,6 +323,24 @@ def cutLosers(children, k, lamda):
 
     return children
 
+def isBetter(front1, front2):
+    numDominated1 = 0
+    for child1 in front1:
+        for child2 in front2:
+            if child1.dominates(child2):
+                numDominated1+=1
+
+    numDominated2 = 0
+    for child1 in front2:
+        for child2 in front1:
+            if child1.dominates(child2):
+                numDominated2+=1
+
+    if numDominated1/len(front1) > numDominated2/len(front2):
+        return True
+    else:
+        return False
+
 #################################################################
 # Main Script
 # Reading in config file
@@ -339,6 +354,7 @@ seed = config.readline().split()[1]
 runs = int(config.readline().split()[1])
 logFile = config.readline().split()[1]
 solFile = config.readline().split()[1]
+analysisFile = config.readline().split()[1]
 seedFile = config.readline().split()[1]
 
 config.readline()
@@ -353,7 +369,6 @@ config.readline()
 config.readline()
 
 commaOrPlus = config.readline().split()[1]
-adapt = config.readline().split()[1]
 
 config.readline()
 config.readline()
@@ -387,15 +402,13 @@ config.readline()
 config.readline()
 config.readline()
 
-restart = config.readline().split()[1]
-r = int(config.readline().split()[1]) 
 evals = int(config.readline().split()[1])
 n = int(config.readline().split()[1])
 
 f = open(cnfFile, 'r')
 log = open(logFile, 'w')
 sol = open(solFile, 'w')
-
+analysis = open(analysisFile, 'w')
 #Seed random
 current_time = time.mktime(datetime.datetime.now().timetuple())
 
@@ -416,9 +429,6 @@ log.write(str(evals))
 log.write("\nPopulation size: " + str(population))
 log.write("\nLambda: " + str(lamda))
 log.write("\nStrategy: " + commaOrPlus)
-log.write("\nSelf-Adaptivity: " + str(adapt))
-log.write("\nRestarts: " + str(restart))
-log.write("\nR-Elitism: " + str(r))
 
 if parentTournament == "True":
     log.write("\nParent Selection: Tournament")
@@ -455,7 +465,7 @@ for line in lines:
         break
 
 mutationRate = 99
-bestTotalSolution = Child()
+bestTotalFront = [Child()]
 #Execute runs
 for i in range(runs):
     log.write("Run " + str(i + 1) + "\n")
@@ -472,9 +482,7 @@ for i in range(runs):
             child.evaluteDontCares()
             children.append(child)
 
-    children = paretoSortChildren(children)
-    best = children[getFittest(children)].fitness
-    bestSolution = children[getFittest(children)]
+    children, bestFront = paretoSortChildren(children)
     avgCorrectClauses = getAverageCorrectClauses(children)
     avgValuesNotUsed = getAverageValuesNotUsed(children)
     bestCorrectClauses = getMostCorrectClauses(children)
@@ -488,56 +496,26 @@ for i in range(runs):
     log.write(str(bestValuesNotUsed) + "\n")
 
     terminate = False
-    reset = False
-    numAvg = 0
-    numBest = 0
-    prevAvg = 0
-    prevBest = 0
+    numConvergence = 0
+    prevBestFront = bestFront
     while(not terminate):
-        if reset:
-            for j in range(population - r):
-                children.pop(getLeastFit(children))
-
-            reset = False
-            numAvg = 0
-            numBest = 0
-            prevAvg = 0
-            prevBest = 0
-            children = []
-            for j in range(population - r):
-                child = Child()
-                child.generateRandom(numVars)
-                child.evaluateCorrectClauses(lines)
-                child.evaluteDontCares()
-                children.append(child)
-
         parents = getParents(children, k_parent, lamda)
-        children = createChildren(children, parents, lines)
+        children, bestFront = createChildren(children, parents, lines)
         children = cutLosers(children, k_survival, lamda)
 
         numEvals+=lamda
-        best = children[getFittest(children)].fitness
-        bestSolution = children[getFittest(children)]
+        numConvergence += 1
         avgCorrectClauses = getAverageCorrectClauses(children)
         avgValuesNotUsed = getAverageValuesNotUsed(children)
         bestCorrectClauses = getMostCorrectClauses(children)
         bestValuesNotUsed = getMostValuesNotUsed(children)
         
-        numAvg+=1
-        if avgCorrectClauses != prevAvg:
-            prevAvg = avgCorrectClauses
-            numAvg = 0
+        if isBetter(bestFront, prevBestFront):
+            prevBestFront = bestFront
+            numConvergence = 0
 
-        numBest+=1
-        if bestCorrectClauses != prevBest:
-            prevBest = bestCorrectClauses
-            numBest = 0
-
-        if numEvals >= evals:
+        if numConvergence > n:
             terminate = True
-        if restart:
-            if numAvg >= n or numBest >= n:
-                reset = True
 
         log.write(str(numEvals) + "\t")
         log.write(str(avgCorrectClauses) + "\t")
@@ -545,22 +523,29 @@ for i in range(runs):
         log.write(str(avgValuesNotUsed) + "\t")
         log.write(str(bestValuesNotUsed) + "\n")
 
-    if bestSolution.fitness > bestTotalSolution.fitness:
-        bestTotalSolution = bestSolution
+    for child in bestFront:
+        analysis.write(str(child.correctClauses) + " " + str(child.valuesNotUsed) + "\n")
+    analysis.write("\n")
+
+    if isBetter(bestFront, bestTotalFront):
+        bestTotalFront = bestFront
     
     log.write("\n\n")
 
-sol.write("c Solution for: ")
-sol.write(cnfFile)
-sol.write("\nc MAXSAT fitness value: ")
-sol.write(str(bestTotalSolution.fitness))
-sol.write("\nv ")
+sol.write("c Solution for: " + cnfFile)
+sol.write("\nc Number of Solutions in Best Front: " + str(len(bestTotalFront)) + "\n\n")
 
-for i in range(0, len(bestTotalSolution.solution)):
-    if bestTotalSolution.solution[i] == False:
-        sol.write("-")
-    sol.write(str(i+1))
-    sol.write(" ")
+for i in range(0, len(bestTotalFront)):
+    sol.write("\nc Number of Correct Clauses: " + str(bestTotalFront[i].correctClauses))
+    sol.write("\nc Number of Unused Boolean Variables " + str(bestTotalFront[i].valuesNotUsed))
+    sol.write("\nv ")
+
+    for j in range(0, len(bestTotalFront[i].solution)):
+        if bestTotalFront[i].solution[j] != 'X':
+            if bestTotalFront[i].solution[j] == 'F':
+                sol.write("-")
+            sol.write(str(j+1))
+            sol.write(" ")
 
 config.close()  
 log.close()
