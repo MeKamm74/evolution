@@ -39,11 +39,11 @@ class Child:
 
                     if num < 0:
                         num *= -1
-                        if self.solution == 'F'
+                        if self.solution[num-1] == 'F':
                             currentLine = True
                     
                     elif num > 0:
-                        if self.solution == 'T'
+                        if self.solution[num-1] == 'T':
                             currentLine = True
                     
                     if currentLine == True:
@@ -51,12 +51,10 @@ class Child:
                         break
 
     def evaluteDontCares(self):
-        count = 0
+        self.valuesNotUsed = 0
         for value in self.solution:
             if value == 'X':
-                count++
-
-        return count
+                self.valuesNotUsed+=1
 
     def dominates(self, child):
         dominates = False
@@ -72,13 +70,17 @@ def paretoSortChildren(children):
     for child in children:
         frontTable = paretoSortChild(child, frontTable)
 
-    children = []
+    numFronts = len(frontTable)
+    current = numFronts
 
-    for front in frontTable:
-        for child in front:
-            children.append(child)
+    for child in children:
+        for front in frontTable:
+            if child in front:
+                child.fitness = (current*child.correctClauses*child.valuesNotUsed)/float(numFronts)
+                break
+        current-=1
 
-    return child
+    return children
 
 def paretoSortChild(child, frontTable):
     if len(frontTable) == 0:
@@ -89,22 +91,27 @@ def paretoSortChild(child, frontTable):
             frontTable[j].append(child)
             break
 
-        for i in range(0, len(front)):
+        done = False
+        for i in range(0, len(frontTable[j])):
             if frontTable[j][i].dominates(child):
+                if j == len(frontTable) - 1:
+                    frontTable.append([])
+
                 break
             elif child.dominates(frontTable[j][i]):
-                frontTable[j].pop(i)
+                x = frontTable[j][i]
                 frontTable[j].append(child)
-                frontTable = paretoSortChild(child, frontTable)
+                frontTable[j].pop(i)
+                frontTable = paretoSortChild(x, frontTable)
                 done = True
+                break
             else:
                 frontTable[j].append(child)
                 done = True
+                break
 
-        if done = True:
+        if done == True:
             break
-        elif j == len(frontTable) - 1:
-            frontTable.append([])
 
     return frontTable 
 
@@ -163,15 +170,41 @@ def getFittest(children):
     return index
 
 #Takes a list of children, Returns the average of all their fitnesses
-def getAverageFitness(children):
+def getAverageCorrectClauses(children):
     total = 0
     for child in children:
-        total += child.fitness
+        total += child.correctClauses
     avg = float(total)/len(children)
 
-    if adapt == "True":
-        mutationRate = 100*(avg/numClauses)
     return avg
+
+def getAverageValuesNotUsed(children):
+    total = 0
+    for child in children:
+        total += child.valuesNotUsed
+    avg = float(total)/len(children)
+
+    return avg
+
+def getMostCorrectClauses(children):
+    best = 0
+    index = 0
+    for i in range(0, len(children)):
+        if children[i].correctClauses > best:
+            index = i
+            best = children[i].correctClauses
+
+    return index
+
+def getMostValuesNotUsed(children):
+    best = 0
+    index = 0
+    for i in range(0, len(children)):
+        if children[i].valuesNotUsed > best:
+            index = i
+            best = children[i].valuesNotUsed
+
+    return index
 
 #Takes a list of children, Returns the index of the child with the lowest fitness
 def getLeastFit(children):
@@ -439,14 +472,20 @@ for i in range(runs):
             child.evaluteDontCares()
             children.append(child)
 
+    children = paretoSortChildren(children)
     best = children[getFittest(children)].fitness
     bestSolution = children[getFittest(children)]
-    avg = getAverageFitness(children)
+    avgCorrectClauses = getAverageCorrectClauses(children)
+    avgValuesNotUsed = getAverageValuesNotUsed(children)
+    bestCorrectClauses = getMostCorrectClauses(children)
+    bestValuesNotUsed = getMostValuesNotUsed(children)
     numEvals = population
 
     log.write(str(numEvals) + "\t")
-    log.write(str(avg) + "\t")
-    log.write(str(best) + "\n")
+    log.write(str(avgCorrectClauses) + "\t")
+    log.write(str(bestCorrectClauses) + "\t")
+    log.write(str(avgValuesNotUsed) + "\t")
+    log.write(str(bestValuesNotUsed) + "\n")
 
     terminate = False
     reset = False
@@ -479,16 +518,19 @@ for i in range(runs):
         numEvals+=lamda
         best = children[getFittest(children)].fitness
         bestSolution = children[getFittest(children)]
-        avg = getAverageFitness(children)
+        avgCorrectClauses = getAverageCorrectClauses(children)
+        avgValuesNotUsed = getAverageValuesNotUsed(children)
+        bestCorrectClauses = getMostCorrectClauses(children)
+        bestValuesNotUsed = getMostValuesNotUsed(children)
         
         numAvg+=1
-        if avg != prevAvg:
-            prevAvg = avg
+        if avgCorrectClauses != prevAvg:
+            prevAvg = avgCorrectClauses
             numAvg = 0
 
         numBest+=1
-        if best != prevBest:
-            prevBest = best
+        if bestCorrectClauses != prevBest:
+            prevBest = bestCorrectClauses
             numBest = 0
 
         if numEvals >= evals:
@@ -498,8 +540,10 @@ for i in range(runs):
                 reset = True
 
         log.write(str(numEvals) + "\t")
-        log.write(str(avg) + "\t")
-        log.write(str(best) + "\n")
+        log.write(str(avgCorrectClauses) + "\t")
+        log.write(str(bestCorrectClauses) + "\t")
+        log.write(str(avgValuesNotUsed) + "\t")
+        log.write(str(bestValuesNotUsed) + "\n")
 
     if bestSolution.fitness > bestTotalSolution.fitness:
         bestTotalSolution = bestSolution
