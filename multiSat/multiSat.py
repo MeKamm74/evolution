@@ -320,7 +320,7 @@ def cutLosers(children, k, lamda):
                     counter += float(1)
                 else:    
                     counter+=1/float(child.fitness)
-                    
+
                 if counter >= randomFitness:
                     parents.append(child)
                     break
@@ -474,6 +474,7 @@ for line in lines:
         numClauses = int(words[3])
         break
 
+#100 - mutationRate = percentage chance of mutation.
 mutationRate = 99
 bestTotalFront = [Child()]
 #Execute runs
