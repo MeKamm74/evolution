@@ -70,16 +70,17 @@ def paretoSortChildren(children):
     for child in children:
         frontTable = paretoSortChild(child, frontTable)
 
-    numFronts = len(frontTable)
-    current = numFronts
-
+    numFronts = len(frontTable) + 1
+    
     for child in children:
+        current = numFronts
         for front in frontTable:
             if child in front:
                 child.fitness = (current*child.correctClauses*child.valuesNotUsed)/float(numFronts)
                 break
-        current-=1
-
+            else:
+                current-=1
+        
     bestFront = frontTable[0]
     return children, bestFront
 
@@ -155,7 +156,10 @@ def sumOfFitness(children):
 def inverseSumOfFitness(children):
     sum = 0
     for child in children:
-        sum += 1/float(child.fitness)
+        if child.fitness == 0:
+            sum += 1
+        else:    
+            sum += 1/float(child.fitness)
 
     return sum
 
@@ -230,7 +234,7 @@ def getParents(children, k, lamda):
             parents.append(tournament[fittestIndex])
 
     else:
-        totalFitness = sumOfFitness(children)
+        totalFitness = int(sumOfFitness(children))
         for i in range(lamda):
             randomFitness = random.randrange(0, totalFitness)
             counter = 0
@@ -307,12 +311,16 @@ def cutLosers(children, k, lamda):
         return children
 
     elif fitnessSurvival == "True":
-        totalFitness = inverseSumOfFitness(children)
+        totalFitness = int(inverseSumOfFitness(children))
         for i in range(lamda):
             randomFitness = random.randrange(0, totalFitness)
             counter = 0
             for child in children:
-                counter+=1/float(child.fitness)
+                if child.fitness == 0:
+                    counter += float(1)
+                else:    
+                    counter+=1/float(child.fitness)
+
                 if counter >= randomFitness:
                     parents.append(child)
                     break
@@ -329,14 +337,16 @@ def isBetter(front1, front2):
         for child2 in front2:
             if child1.dominates(child2):
                 numDominated1+=1
+                break
 
     numDominated2 = 0
     for child1 in front2:
         for child2 in front1:
             if child1.dominates(child2):
                 numDominated2+=1
+                break
 
-    if numDominated1/len(front1) > numDominated2/len(front2):
+    if numDominated1/float(len(front1)) > numDominated2/float(len(front2)):
         return True
     else:
         return False
@@ -464,6 +474,7 @@ for line in lines:
         numClauses = int(words[3])
         break
 
+#100 - mutationRate = percentage chance of mutation.
 mutationRate = 99
 bestTotalFront = [Child()]
 #Execute runs
@@ -514,7 +525,11 @@ for i in range(runs):
             prevBestFront = bestFront
             numConvergence = 0
 
-        if numConvergence > n:
+        if n:
+            if numConvergence > n:
+                terminate = True
+
+        if numEvals >= evals:
             terminate = True
 
         log.write(str(numEvals) + "\t")
