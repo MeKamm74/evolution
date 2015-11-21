@@ -18,11 +18,15 @@ class State(object):
 		self.pDensity = pDensity
 		self.distanceGhost = 0
 		self.distancePill = 0
-
+		self.rank = 0
+		
 	def generateGrid(self, pDensity):
 		self.time = self.width*self.height*2
 		self.totalTime = self.time
 		self.msPac.setDefaultLocation(self.height)
+		self.pills = []
+		self.score = 0
+		self.numEaten = 0
 		for ghost in self.ghosts:
 			ghost.setDefaultLocation(self.width)
 
@@ -35,9 +39,18 @@ class State(object):
 
 		self.totalPills = len(self.pills)
 
-	def step(self):
-		self.msPac.randomStep(self)
+		for pill in self.pills:
+			temp = abs(self.msPac.locationX - pill.x) + abs(self.msPac.locationY - pill.y)
+			if temp > self.distancePill:
+				self.distancePill = temp
 
+		for ghost in self.ghosts:
+			temp = abs(self.msPac.locationX - ghost.locationX) + abs(self.msPac.locationY - ghost.locationY)
+			if temp > self.distanceGhost:
+				self.distanceGhost = temp
+
+	def step(self, move):
+		self.msPac.chooseStep(move)
 		for ghost in self.ghosts:
 			ghost.randomStep(self)
 
@@ -47,6 +60,16 @@ class State(object):
 					self.pills.pop(i)
 					self.numEaten += 1
 					break;
+
+		for pill in self.pills:
+			temp = abs(self.msPac.locationX - pill.x) + abs(self.msPac.locationY - pill.y)
+			if temp > self.distancePill:
+				self.distancePill = temp
+
+		for ghost in self.ghosts:
+			temp = abs(self.msPac.locationX - ghost.locationX) + abs(self.msPac.locationY - ghost.locationY)
+			if temp > self.distanceGhost:
+				self.distanceGhost = temp
 
 		self.score = int((float(self.numEaten)/self.totalPills)*100)
 		self.time-=1
@@ -66,18 +89,34 @@ class State(object):
 
 		return False
 
+	def evaluateState(self):
+		self.rank = self.evaluate(self.msPac.tree)
+
 	def evaluate(self, tree):
 		if tree.value == "DISTGHOST":
 			return self.distanceGhost
 		elif tree.value == "DISTPILL":
 			return self.distancePill
+		elif len(tree.children) == 1:
+			return self.evaluate(tree.children[0])
 		elif tree.value == "ADD":
-			return evaluate(self, tree.children[0]) + evaluate(self, tree.children[1])
+			return self.evaluate(tree.children[0]) + self.evaluate(tree.children[1])
 		elif tree.value == "SUB":
-			return evaluate(self, tree.children[0]) - evaluate(self, tree.children[1])
+			return self.evaluate(tree.children[0]) - self.evaluate(tree.children[1])
 		elif tree.value == "MULT":
-			return evaluate(self, tree.children[0]) * evaluate(self, tree.children[1])
+			return self.evaluate(tree.children[0]) * self.evaluate(tree.children[1])
 		elif tree.value == "DIV":
-			return evaluate(self, tree.children[0]) / evaluate(self, tree.children[1])
+			temp = self.evaluate(tree.children[1])
+			if temp == 0:
+				temp = 1
+			return self.evaluate(tree.children[0]) / temp
 		elif tree.value == "RAND":
-			return random.randrange(evaluate(self, tree.children[0]), evaluate(self, tree.children[1]))
+			temp = self.evaluate(tree.children[0])
+			temp2 = self.evaluate(tree.children[1])
+
+			if temp == temp2:
+				return temp
+			elif temp > temp2:
+				return random.randrange(temp2, temp)
+			else:
+				return random.randrange(temp, temp2)

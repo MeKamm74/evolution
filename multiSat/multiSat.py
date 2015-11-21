@@ -18,7 +18,7 @@ class Child:
     #generates a random solution for the child
     def generateRandom(self, numVars):
         for i in range(numVars):
-            rand = random.randrange(0, 3);
+            rand = random.randrange(0, 3)
             if rand == 0:
                 self.solution.append('F')
             elif rand == 1:

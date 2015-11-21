@@ -1,15 +1,14 @@
 import random
 
-class MsPac(object):
+class Ghost(object):
 	def __init__(self):
 		self.locationX = 0
 		self.locationY = 0
-		self.tree = Node()
 
 	def randomStep(self, state):
 		invalidMove = True
 		while invalidMove:
-			rand = random.randrange(0, 5)
+			rand = random.randrange(0, 4)
 
 			if rand == 0:
 				if self.locationX > 0:
@@ -27,19 +26,7 @@ class MsPac(object):
 				if self.locationY < state.height-1:
 					invalidMove = False
 					self.locationY+=1
-			else:
-				invalidMove = False
 
-	def setDefaultLocation(self, height):
-		self.locationY = height
-
-	def evaluateState(self, state):
-		eva
-		if self.tree.data == "DISTGHOST":
-			return state.distanceGhost
-		elif self.tree.data == "DISTPILL":
-			return state.distancePill
-
-		elif self.tree.data == "ADD":
-			return evaluate()
-		self.tree
+	def setDefaultLocation(self, width):
+		self.locationX = width
+		self.locationY = 0

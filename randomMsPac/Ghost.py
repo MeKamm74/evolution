@@ -1,9 +1,6 @@
 import random
 
-class Ghost:
-	locationX
-	locationY
-
+class Ghost(object):
 	def __init__(self):
 		self.locationX = 0
 		self.locationY = 0
@@ -11,7 +8,7 @@ class Ghost:
 	def randomStep(self, state):
 		invalidMove = True
 		while invalidMove:
-			rand = random.randRange(0, 4)
+			rand = random.randrange(0, 4)
 
 			if rand == 0:
 				if self.locationX > 0:
@@ -22,10 +19,13 @@ class Ghost:
 					invalidMove = False
 					self.locationY-=1
 			elif rand == 2:
-				if self.locationX < state.gridWidth
+				if self.locationX < state.width-1:
 					invalidMove = False
 					self.locationX+=1
 			elif rand == 3:
-				if self.locationY < state.gridHeight
+				if self.locationY < state.height-1:
 					invalidMove = False
 					self.locationY+=1
+
+	def setDefaultLocation(self, width):
+		self.locationX = width

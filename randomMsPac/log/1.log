@@ -1,0 +1,38 @@
+Number of Runs: 3
+Number of Evals: 2000
+World height: 10
+World width: 10
+Pill Density: 50
+Random Seed 1447008423.0
+
+Results Log
+---------------
+
+Run 1
+0	15
+2	44
+16	68
+539	69
+1372	74
+
+Run 2
+0	39
+2	43
+15	45
+25	50
+28	51
+36	60
+80	62
+167	66
+425	72
+
+Run 3
+0	31
+1	32
+6	42
+13	50
+24	59
+55	60
+65	68
+1007	78
+
