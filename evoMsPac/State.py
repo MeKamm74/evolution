@@ -97,6 +97,10 @@ class State(object):
 			return self.distanceGhost
 		elif tree.value == "DISTPILL":
 			return self.distancePill
+		elif tree.value == "CONSTANT":
+			randInt = random.randRange(0, self.height)
+			randFloat = random.random()
+			return randInt + randFloat
 		elif len(tree.children) == 1:
 			return self.evaluate(tree.children[0])
 		elif tree.value == "ADD":

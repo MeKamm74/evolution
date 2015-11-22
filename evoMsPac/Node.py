@@ -25,13 +25,13 @@ class Node(object):
 	def mutate(self):
 
 		if len(self.children) == 0:
-			possibleValues = ["DISTGHOST", "DISTPILL"]
+			possibleValues = ["DISTGHOST", "DISTPILL", "CONSTANT"]
 			rand = random.randrange(0, len(possibleValues))
 			self.values = possibleValues[rand]
 		else:
 			rand = random.randrange(0, len(self.children))
 			if rand == 0:
-				possibleValues = ["DISTGHOST", "DISTPILL"]
+				possibleValues = ["DISTGHOST", "DISTPILL","CONSTANT"]
 				rand = random.randrange(0, len(possibleValues))
 				self.values = possibleValues[rand]
 			else:

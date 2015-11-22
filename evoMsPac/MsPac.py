@@ -7,7 +7,7 @@ class MsPac(object):
 		self.locationY = 0
 		self.tree = 0
 		self.functions = ["ADD", "SUB", "MULT", "DIV", "RAND"]
-		self.terminals = ["DISTGHOST", "DISTPILL"]
+		self.terminals = ["DISTGHOST", "DISTPILL", "CONSTANT"]
 
 	def getValidMoves(self, state):
 		moves = ["STAY"]

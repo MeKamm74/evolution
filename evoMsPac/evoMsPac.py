@@ -72,23 +72,29 @@ def runGame(state):
 
 	return state, tempWorld
 
-def createChildren(population, genSize, bestOverallScore, worldFile, pDensity):
+def createChildren(population, genSize, bestOverallScore, worldFile, pDensity, maxDepth, p, parentSelection):
 	children = []
 	for i in range(0, genSize):
 		#Choose Parents
-		parents = chooseParents(population)
+		rand = random.randrange(0, 2)
+		if rand == 0:
+			parents = chooseParents(population, parentSelection, 2)
+			tree = combine(parents)
 
-		tree = combine(parents)
+			msPac = MsPac.MsPac()
+			msPac.tree = tree
+			child = State.State(parents[0].width, parents[0].height, parents[0].ghosts, msPac, pDensity)
 
-		msPac = MsPac.MsPac()
-		msPac.tree = tree
-		child = State.State(parents[0].width, parents[0].height, parents[0].ghosts, msPac, pDensity)
-
-		child = mutate(child)
+		else:
+			parents = chooseParents(population, parentSelection, 1)
+			tree = parents[0].msPac.tree
+			msPac = MsPac.MsPac()
+			msPac.tree = tree
+			child = State.State(parents[0].width, parents[0].height, parents[0].ghosts, msPac, pDensity)
 		
 		child.generateGrid(pDensity)
 		child, tempWorld = runGame(child)
-
+		child = penalty(child, p, maxDepth)
 		if child.score > bestOverallScore:
 			#Log the world file if best overall
 			bestOverallScore = child.score
@@ -97,24 +103,45 @@ def createChildren(population, genSize, bestOverallScore, worldFile, pDensity):
 			world.close() 
 		children.append(child)
 
-	population.extend(population)
+	population.extend(children)
 	return population
 
-def chooseParents(population):
+def chooseParents(population, parentSelection, num):
 	parents = []
-	for i in range(0, 2):
-		total = totalFitness(population)
-		count = 0
-		if total == 0:
-			rand = random.randrange(0, len(population))
-			parents.append(population[rand])
-		else:
-			rand = random.randrange(0, total)
-			for state in population:
-				count += state.score
-				if count > rand:
-					parents.append(state)
-					break
+	if parentSelection == "OVERSELECTION":
+		population.sort(key=lambda x: x.score)
+		s1 = []
+		s2 = []
+		x = len(population) - 1
+		while (float(len(s1))/len(population))*100 < 32:
+			s1.append(population[x])
+			x -= 1
+
+		while x >= 0:
+			x-=1
+			s2.append(population[x])
+
+		for i in range(0, num):
+			rand = random.randrange(1, 101)
+			if rand < 80:
+				parents.append(s1.pop(0))
+			else:
+				parents.append(s2.pop(0))
+
+	else:
+		for i in range(0, num):
+			total = totalFitness(population)
+			count = 0
+			if total == 0:
+				rand = random.randrange(0, len(population))
+				parents.append(population[rand])
+			else:
+				rand = random.randrange(0, total)
+				for state in population:
+					count += state.score
+					if count > rand:
+						parents.append(state)
+						break
 
 	return parents
 
@@ -128,12 +155,33 @@ def mutate(state):
 	state.msPac.tree = state.msPac.tree.mutate()
 	return state
 
-def cutLosers(population, size):
-	population.sort(key=lambda x: x.score)
-	while len(population) > size:
-		population.pop(0)
+def cutLosers(population, size, k):
+	if k == 0:
+		population.sort(key=lambda x: x.score)
+		while len(population) > size:
+			population.pop(0)
+
+	else:
+		while len(population) > size:
+			indexes = random.sample(range(0, len(population)), k)
+			tournament = []
+			for j in indexes:
+			    tournament.append(population[j])
+			leastFitIndex = worstIndex(tournament)
+			population.pop(indexes[leastFitIndex])
 
 	return population
+
+def penalty(state, p, maxDepth):
+	threshold = 0
+	for i in range(0, maxDepth):
+		threshold+=i
+
+	size = len(state.msPac.tree.wholeTree())
+	if size > threshold:
+		state.score -= p*(size - threshold)
+
+	return state
 
 def totalFitness(population):
 	total = 0
@@ -178,10 +226,12 @@ def main():
 	popSize = int(config.readline().split()[1])
 	genSize = int(config.readline().split()[1])
 	maxDepth = int(config.readline().split()[1])
+	parentSelection = config.readline().split()[1]
 	k = int(config.readline().split()[1])
 	p = int(config.readline().split()[1])
 	numEvals = int(config.readline().split()[1])
 	runs = int(config.readline().split()[1])
+	n = int(config.readline().split()[1])
 	logFile = config.readline().split()[1]
 	worldFile = config.readline().split()[1]
 
@@ -260,21 +310,30 @@ def main():
 		avgScore = averageFitness(population)
 		bestScore = bestFitness(population)
 		log.write(str(evals) + "\t" + str(avgScore) + "\t" + str(bestScore) + "\n")	
-			
-		while evals < numEvals:
+		terminate = False
+		previousBest = bestScore
+		tillConverge = n
+		while not terminate:
 			#Create Children
-			population = createChildren(population, genSize, bestOverallScore, worldFile, pDensity)
+			population = createChildren(population, genSize, bestOverallScore, worldFile, pDensity, maxDepth, p, parentSelection)
 			
 			#Cut Losers
-			population = cutLosers(population, popSize)
+			population = cutLosers(population, popSize, k)
 			evals += genSize
 
 			#Log
 			avgScore = averageFitness(population)
 			bestScore = bestFitness(population)
 			log.write(str(evals) + "\t" + str(avgScore) + "\t" + str(bestScore) + "\n")
+			tillConverge -= 1
+			if bestScore > previousBest:
+				tillConverge = n
+				previousBest = bestScore
+			elif tillConverge == 0:
+				terminate = True
 
-
+			if evals > numEvals:
+				terminate = True
 		log.write("\n")
 	log.close()
 
