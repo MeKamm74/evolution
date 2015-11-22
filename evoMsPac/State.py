@@ -1,8 +1,12 @@
+#Author: Michael Kammeyer
+
 import random
 import Ghost
 import MsPac
 import Pill
 
+#Contains all board data including locations of all entities, dimensions of board, etc.
+#Also tracks score, time, pills eaten, and "rank" for deciding moves.
 class State(object):
 	def __init__(self, width, height, ghosts, msPac, pDensity):
 		self.height = height
@@ -20,6 +24,7 @@ class State(object):
 		self.distancePill = 0
 		self.rank = 0
 		
+	#Generates locations of all pills, ghosts, and msPac; resets scores and calculates distances
 	def generateGrid(self, pDensity):
 		self.time = self.width*self.height*2
 		self.totalTime = self.time
@@ -49,6 +54,7 @@ class State(object):
 			if temp > self.distanceGhost:
 				self.distanceGhost = temp
 
+	#Moves all entities for one move, recalculates values.
 	def step(self, move):
 		self.msPac.chooseStep(move)
 		for ghost in self.ghosts:
@@ -74,6 +80,7 @@ class State(object):
 		self.score = int((float(self.numEaten)/self.totalPills)*100)
 		self.time-=1
 
+	#Checks to see if game is over or not.
 	def isGameOver(self):
 		for ghost in self.ghosts:
 			if self.msPac.locationX == ghost.locationX:
@@ -89,6 +96,7 @@ class State(object):
 
 		return False
 
+	#Evaluates the rank of current state using MsPac's controller
 	def evaluateState(self):
 		self.rank = self.evaluate(self.msPac.tree)
 
@@ -97,10 +105,6 @@ class State(object):
 			return self.distanceGhost
 		elif tree.value == "DISTPILL":
 			return self.distancePill
-		elif tree.value == "CONSTANT":
-			randInt = random.randRange(0, self.height)
-			randFloat = random.random()
-			return randInt + randFloat
 		elif len(tree.children) == 1:
 			return self.evaluate(tree.children[0])
 		elif tree.value == "ADD":
@@ -118,9 +122,11 @@ class State(object):
 			temp = self.evaluate(tree.children[0])
 			temp2 = self.evaluate(tree.children[1])
 
-			if temp == temp2:
+			if int(temp) == int(temp2):
 				return temp
 			elif temp > temp2:
-				return random.randrange(temp2, temp)
+				return random.randrange(int(temp2), int(temp))
 			else:
-				return random.randrange(temp, temp2)
+				return random.randrange(int(temp), int(temp2))
+		else:
+			return tree.value

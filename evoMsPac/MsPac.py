@@ -1,3 +1,5 @@
+#Author: Michael Kammeyer
+
 import random
 import Node
 
@@ -6,9 +8,11 @@ class MsPac(object):
 		self.locationX = 0
 		self.locationY = 0
 		self.tree = 0
+		#lists contain possible values in the tree
 		self.functions = ["ADD", "SUB", "MULT", "DIV", "RAND"]
 		self.terminals = ["DISTGHOST", "DISTPILL", "CONSTANT"]
 
+	#Returns a list of valid moves
 	def getValidMoves(self, state):
 		moves = ["STAY"]
 		if self.locationX > 0:
@@ -22,6 +26,7 @@ class MsPac(object):
 
 		return moves
 
+	#Makes a random valid move. Not used since evolving, but here if need be. 
 	def randomStep(self, state):
 		moves = getValidMoves(self, state)
 		rand = random.randrange(0, len(moves))
@@ -35,6 +40,7 @@ class MsPac(object):
 		elif moves[rand] == "DOWN":
 			self.locationY+=1
 
+	#Makes a given move.
 	def chooseStep(self, move):
 		if move == "LEFT":
 			self.locationX-=1
@@ -45,13 +51,16 @@ class MsPac(object):
 		elif move == "DOWN":
 			self.locationY+=1
 
+	#Resets msPac to starting location on board.
 	def setDefaultLocation(self, height):
-		self.locationY = height
+		self.locationY = height - 1
 		self.locationX = 0
 
+	#Generates a random grow tree
 	def generateGrowTree(self, maxDepth):
 		self.tree = self.growNode(maxDepth)
 
+	#Recursive part from above.
 	def growNode(self, maxDepth):
 		if maxDepth > 1:
 
@@ -72,9 +81,11 @@ class MsPac(object):
 
 		return node
 
+	#Generates a random Full Tree
 	def generateFullTree(self, maxDepth):
 		self.tree = self.fullNode(maxDepth)
 
+	#Recursive part from above.
 	def fullNode(self, maxDepth):
 		if maxDepth > 1:
 			rand = random.randrange(0, len(self.functions))

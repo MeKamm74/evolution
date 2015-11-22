@@ -5,6 +5,7 @@ class Ghost(object):
 		self.locationX = 0
 		self.locationY = 0
 
+	#Ghosts still only move randomly
 	def randomStep(self, state):
 		invalidMove = True
 		while invalidMove:
@@ -27,6 +28,7 @@ class Ghost(object):
 					invalidMove = False
 					self.locationY+=1
 
+	#resets ghost to starting spot on the board.
 	def setDefaultLocation(self, width):
-		self.locationX = width
+		self.locationX = width - 1
 		self.locationY = 0
