@@ -108,11 +108,11 @@ class State(object):
 		elif tree.value == "DIV":
 			temp = self.evaluate(tree.children[1])
 			if temp == 0:
-				temp = 1
+				temp = 0.00000001
 			return self.evaluate(tree.children[0]) / temp
 		elif tree.value == "RAND":
-			temp = self.evaluate(tree.children[0])
-			temp2 = self.evaluate(tree.children[1])
+			temp = float(self.evaluate(tree.children[0]))
+			temp2 = float(self.evaluate(tree.children[1]))
 
 			if temp == temp2:
 				return temp
