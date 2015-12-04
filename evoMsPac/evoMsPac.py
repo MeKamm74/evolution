@@ -7,7 +7,6 @@ import State
 import time
 import datetime
 import random
-
 #Returns the move for Ms. Pacman to make
 def chooseMove(moves, state, numGhost=-1):
 	if numGhost == -1:
@@ -49,7 +48,7 @@ def chooseMove(moves, state, numGhost=-1):
 		best = ""
 		for move in moves:
 			if move == "LEFT":
-				tempState = State.State(state.width, state.height, state.ghosts, state.msPac, state.pDensity)
+				tempState = state
 				tempState.ghosts[numGhost].locationX -= 1
 				tempState.evaluateGhostState(numGhost)
 				if tempState.rank > bestRank:
@@ -96,12 +95,12 @@ def runGame(state):
 	gameOver = False
 	while not gameOver:
 		pacMoves = state.msPac.getValidMoves(state)
-		move = chooseMove(pacMoves, state, True)
+		move = chooseMove(pacMoves, state)
 
 		ghostMoves = []
-		for ghost in state.ghosts:
-			moves = ghost.getValidMoves(state)
-			ghostMoves.append(chooseMove(moves, state, False))
+		for i in range(0, len(state.ghosts)):
+			moves = state.ghosts[i].getValidMoves(state)
+			ghostMoves.append(chooseMove(moves, state, i))
 		#Update the board
 		state.step(move, ghostMoves)
 
@@ -148,9 +147,9 @@ def createChildren(populationMsPac, populationGhosts, genSize, bestOverallScore,
 				ghost.tree = ghosts1[0].tree
 				ghosts1.append(ghost)
 
-				ghost = Ghost.Ghost()
-				ghost.tree = ghosts2[0].tree
-				ghosts2.append(ghost)
+				newGhost = Ghost.Ghost()
+				newGhost.tree = ghosts2[0].tree
+				ghosts2.append(newGhost)
 
 			child1 = State.State(width, height, ghosts1, msPac1, pDensity)
 			child2 = State.State(width, height, ghosts2, msPac2, pDensity)
@@ -514,6 +513,8 @@ def main():
 
 				solution = open(solFile, 'w')
 				solution.write(state.msPac.tree.printOut(1))
+				solution.write("\n\n")
+				solution.write(state.ghosts[0].tree.printOut(1))
 				solution.close()
 
 		#Then Grow trees

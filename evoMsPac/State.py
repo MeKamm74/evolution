@@ -62,10 +62,9 @@ class State(object):
 	#Moves all entities for one move, recalculates values.
 	def step(self, pacMove, ghostMoves):
 		self.msPac.chooseStep(pacMove)
-		x = 0
-		for ghost in self.ghosts:
-			ghost.chooseStep(ghostMoves[x])
-			x+=1
+		
+		for i in range(0, len(self.ghosts)):
+			self.ghosts[i].chooseStep(ghostMoves[i])
 
 		for i in range(0, len(self.pills)):
 			if self.pills[i].x == self.msPac.locationX:
