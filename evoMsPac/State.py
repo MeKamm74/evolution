@@ -32,8 +32,10 @@ class State(object):
 		self.pills = []
 		self.score = 0
 		self.numEaten = 0
+
 		for ghost in self.ghosts:
 			ghost.setDefaultLocation(self.width)
+			ghost.distanceGhost = 0
 
 		for i in range(0, self.width):
 			for j in range(0, self.height):
@@ -53,19 +55,24 @@ class State(object):
 			temp = abs(self.msPac.locationX - ghost.locationX) + abs(self.msPac.locationY - ghost.locationY)
 			if temp > self.distanceGhost:
 				self.distanceGhost = temp
+		
+		for ghost in self.ghosts:
+			ghost.distancePac = self.distanceGhost
 
 	#Moves all entities for one move, recalculates values.
-	def step(self, move):
-		self.msPac.chooseStep(move)
+	def step(self, pacMove, ghostMoves):
+		self.msPac.chooseStep(pacMove)
+		x = 0
 		for ghost in self.ghosts:
-			ghost.randomStep(self)
+			ghost.chooseStep(ghostMoves[x])
+			x+=1
 
 		for i in range(0, len(self.pills)):
 			if self.pills[i].x == self.msPac.locationX:
 				if self.pills[i].y == self.msPac.locationY:
 					self.pills.pop(i)
 					self.numEaten += 1
-					break;
+					break
 
 		for pill in self.pills:
 			temp = abs(self.msPac.locationX - pill.x) + abs(self.msPac.locationY - pill.y)
@@ -74,8 +81,17 @@ class State(object):
 
 		for ghost in self.ghosts:
 			temp = abs(self.msPac.locationX - ghost.locationX) + abs(self.msPac.locationY - ghost.locationY)
+			ghost.distancePac = temp
 			if temp > self.distanceGhost:
 				self.distanceGhost = temp
+
+		for i in range(0, len(self.ghosts)):
+			self.ghosts[i].distanceGhost = 10000000
+			for j in range(0, len(self.ghosts)):
+				if i != j:
+					temp = abs(self.ghosts[i].locationX - self.ghosts[j].locationX) + abs(self.ghosts[i].locationY - self.ghosts[j].locationY)
+					if temp < self.ghosts[i].distanceGhost:
+						self.ghosts[i].distanceGhost = temp
 
 		self.score = int((float(self.numEaten)/self.totalPills)*100)
 		self.time-=1
@@ -100,9 +116,16 @@ class State(object):
 	def evaluateState(self):
 		self.rank = self.evaluate(self.msPac.tree)
 
-	def evaluate(self, tree):
+	def evaluateGhostState(self, numGhost):
+		self.rank = self.evaluate(self.ghosts[numGhost].tree, numGhost)
+
+	def evaluate(self, tree, numGhost=-1):
 		if tree.value == "DISTGHOST":
+			if numGhost != -1:
+				return self.ghosts[numGhost].distanceGhost
 			return self.distanceGhost
+		elif tree.value == "DISTPAC":
+			return self.ghosts[numGhost].distancePac
 		elif tree.value == "DISTPILL":
 			return self.distancePill
 		elif len(tree.children) == 1:

@@ -11,18 +11,39 @@ class MsPac(object):
 		#lists contain possible values in the tree
 		self.functions = ["ADD", "SUB", "MULT", "DIV", "RAND"]
 		self.terminals = ["DISTGHOST", "DISTPILL", "CONSTANT"]
-
+		self.score = 0
+		
 	#Returns a list of valid moves
 	def getValidMoves(self, state):
 		moves = ["STAY"]
+		occupied = False
 		if self.locationX > 0:
-			moves.append("LEFT")
+			for ghost in state.ghosts:
+				if ghost.locationX == self.locationX - 1 and ghost.locationY == self.locationY:
+					occupied = True
+			if not occupied:
+				moves.append("LEFT")
+			occupied = False
 		if self.locationY > 0:
-			moves.append("UP")
+			for ghost in state.ghosts:
+				if ghost.locationX == self.locationX and ghost.locationY == self.locationY-1:
+					occupied = True
+			if not occupied:
+				moves.append("UP")
+			occupied = False
 		if self.locationX < state.width-1:
-			moves.append("RIGHT")
+			for ghost in state.ghosts:
+				if ghost.locationX == self.locationX + 1 and ghost.locationY == self.locationY:
+					occupied = True
+			if not occupied:
+				moves.append("RIGHT")
+			occupied = False
 		if self.locationY < state.height-1:
-			moves.append("DOWN")
+			for ghost in state.ghosts:
+				if ghost.locationX == self.locationX and ghost.locationY == self.locationY+1:
+					occupied = True
+			if not occupied:
+				moves.append("DOWN")
 
 		return moves
 
