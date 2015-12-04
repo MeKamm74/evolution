@@ -124,7 +124,9 @@ def createChildren(population, genSize, bestOverallScore, worldFile, solFile, pD
 				solution = open(solFile, 'w')
 				solution.write(child2.msPac.tree.printOut(1))
 				solution.close()
-				children.append(child)
+
+			children.append(child1)
+			children.append(child2)
 			i+=2
 
 		else:
@@ -219,7 +221,7 @@ def combine(parents):
 
 #returns a mutation of one parent.
 def mutate(state):
-	state.msPac.tree = state.msPac.tree.mutate()
+	state.msPac.tree.mutate()
 	return state
 
 #Runs survival selection till population is back to size, either using k-tournament or truncation.

@@ -41,9 +41,9 @@ class Node(object):
 			possibleValues = ["DISTGHOST", "DISTPILL", "CONSTANT"]
 			rand = random.randrange(0, len(possibleValues))
 			if possibleValues[rand] == "CONSTANT":
-				self.values = random.randint(0, 10) + random.random()
+				self.value = random.randint(0, 10) + random.random()
 			else:
-				self.values = possibleValues[rand]
+				self.value = possibleValues[rand]
 		else:
 			if random.random > 0.5:
 				self.growNode(3)
@@ -71,14 +71,14 @@ class Node(object):
 	#Recursive part from above.
 	def growNode(self, maxDepth):
 		functions = ["ADD", "SUB", "MULT", "DIV", "RAND"]
-		terminals = ["DISTGHOST", "DISTPILL", "CONSTANT"]
+		terminals = ["DISTGHOST", "DISTPILL"]
 		if maxDepth > 1:
 			rand = random.randrange(0, 2)
 			if rand == 0:
 				rand = random.randrange(0, len(functions))
 				self.value = functions[rand]
-				self.children.append(Node("CONSTANT"))
-				self.children.append(Node("CONSTANT"))
+				self.children.append(Node("DISTPILL"))
+				self.children.append(Node("DISTPILL"))
 				for child in self.children:
 					child.growNode(maxDepth-1)
 		
