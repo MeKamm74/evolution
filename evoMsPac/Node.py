@@ -1,5 +1,5 @@
 #Author: Michael Kammeyer
-
+import copy
 import random
 
 class Node(object):
@@ -22,17 +22,21 @@ class Node(object):
 		rand = random.randrange(0, 2)
 		if len(self.children) > 0 and rand == 0:
 			rand = random.randrange(0, len(self.children))
-			return self.children[rand].combine(tree)
+			self.children[rand].combine(tree)
 
 		else:
 			nodes = tree.wholeTree()
 			rand = random.randrange(0, len(nodes))
 			self = nodes[rand]
-		return self
+			# self.value = nodes[rand].value
+			# if not self.value in ["SUB", "ADD", "MULT", "DIV", "RAND"]:
+			# 	self.children = []
+			# else:
+			# 	for child in nodes[rand].children:
+			# 		self.children.append(copy.deepcopy(child))
 
 	#Mutates one node in the tree rooted at the current node
 	def mutate(self):
-
 		if len(self.children) == 0:
 			possibleValues = ["DISTGHOST", "DISTPILL", "CONSTANT"]
 			rand = random.randrange(0, len(possibleValues))
@@ -41,17 +45,11 @@ class Node(object):
 			else:
 				self.values = possibleValues[rand]
 		else:
-			rand = random.randrange(0, len(self.children))
-			if rand == 0:
-				possibleValues = ["DISTGHOST", "DISTPILL", "CONSTANT"]
-				rand = random.randrange(0, len(possibleValues))
-				if possibleValues[rand] == "CONSTANT":
-					self.values = random.randint(0, 10) + random.random()
-				else:
-					self.values = possibleValues[rand]
+			if random.random > 0.5:
+				self.growNode(3)
 			else:
-				return self.children[rand].mutate()
-		return self
+				rand = random.randrange(0, len(self.children))
+				self.children[rand].mutate()
 
 	#Returns a list that contains every node in the tree rooted at current node
 	def wholeTree(self):
@@ -69,3 +67,26 @@ class Node(object):
 			output += child.printOut(num+1)
 
 		return output
+
+	#Recursive part from above.
+	def growNode(self, maxDepth):
+		functions = ["ADD", "SUB", "MULT", "DIV", "RAND"]
+		terminals = ["DISTGHOST", "DISTPILL", "CONSTANT"]
+		if maxDepth > 1:
+			rand = random.randrange(0, 2)
+			if rand == 0:
+				rand = random.randrange(0, len(functions))
+				self.value = functions[rand]
+				self.children.append(Node("CONSTANT"))
+				self.children.append(Node("CONSTANT"))
+				for child in self.children:
+					child.growNode(maxDepth-1)
+		
+			else:
+				rand = random.randrange(0, len(terminals))
+				self.value = terminals[rand]
+				self.children = []
+		else:
+			rand = random.randrange(0, len(terminals))
+			self.value = terminals[rand]
+			self.children = []

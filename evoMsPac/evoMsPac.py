@@ -80,16 +80,52 @@ def runGame(state):
 #Chooses Parents, combines or mutates them to create children, evaluates them, and adds them to the population
 def createChildren(population, genSize, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, parentSelection):
 	children = []
-	for i in range(0, genSize):
+	i = 0
+	while i < genSize:
 		#Choose Parents
 		rand = random.randrange(0, 2)
 		if rand == 0:
 			parents = chooseParents(population, parentSelection, 2)
-			tree = combine(parents)
+			tree1, tree2 = combine(parents)
 
-			msPac = MsPac.MsPac()
-			msPac.tree = tree
-			child = State.State(parents[0].width, parents[0].height, parents[0].ghosts, msPac, pDensity)
+			msPac1 = MsPac.MsPac()
+			msPac1.tree = tree1
+			msPac2 = MsPac.MsPac()
+			msPac2.tree = tree2
+
+			child1 = State.State(parents[0].width, parents[0].height, parents[0].ghosts, msPac1, pDensity)
+			child2 = State.State(parents[0].width, parents[0].height, parents[0].ghosts, msPac2, pDensity)
+
+			child1.generateGrid(pDensity)
+			child1, tempWorld1 = runGame(child1)
+			child1 = penalty(child1, p, maxDepth)
+			child2.generateGrid(pDensity)
+			child2, tempWorld2 = runGame(child2)
+			child2 = penalty(child2, p, maxDepth)
+
+			if child1.score > bestOverallScore:
+				#Log the world file if best overall
+				bestOverallScore = child1.score
+				world = open(worldFile, 'w')
+				world.write(tempWorld1)
+				world.close() 
+
+				solution = open(solFile, 'w')
+				solution.write(child1.msPac.tree.printOut(1))
+				solution.close()
+
+			if child2.score > bestOverallScore:
+				#Log the world file if best overall
+				bestOverallScore = child2.score
+				world = open(worldFile, 'w')
+				world.write(tempWorld2)
+				world.close() 
+
+				solution = open(solFile, 'w')
+				solution.write(child2.msPac.tree.printOut(1))
+				solution.close()
+				children.append(child)
+			i+=2
 
 		else:
 			parents = chooseParents(population, parentSelection, 1)
@@ -97,21 +133,24 @@ def createChildren(population, genSize, bestOverallScore, worldFile, solFile, pD
 			msPac = MsPac.MsPac()
 			msPac.tree = tree
 			child = State.State(parents[0].width, parents[0].height, parents[0].ghosts, msPac, pDensity)
+			child = mutate(child)
+			child.generateGrid(pDensity)
+			child, tempWorld = runGame(child)
+			child = penalty(child, p, maxDepth)
 		
-		child.generateGrid(pDensity)
-		child, tempWorld = runGame(child)
-		child = penalty(child, p, maxDepth)
-		if child.score > bestOverallScore:
-			#Log the world file if best overall
-			bestOverallScore = child.score
-			world = open(worldFile, 'w')
-			world.write(tempWorld)
-			world.close() 
+			if child.score > bestOverallScore:
+				#Log the world file if best overall
+				bestOverallScore = child.score
+				world = open(worldFile, 'w')
+				world.write(tempWorld)
+				world.close() 
 
-			solution = open(solFile, 'w')
-			solution.write(child.msPac.tree.printOut(1))
-			solution.close()
-		children.append(child)
+				solution = open(solFile, 'w')
+				solution.write(child.msPac.tree.printOut(1))
+				solution.close()
+
+			children.append(child)
+			i+=1
 
 	population.extend(children)
 	return population, bestOverallScore
@@ -133,11 +172,24 @@ def chooseParents(population, parentSelection, num):
 			s2.append(population[x])
 
 		for i in range(0, num):
+			totalTop = totalFitness(s1)
+			totalBottom = totalFitness(s2)
+			count = 0
 			rand = random.randrange(1, 101)
 			if rand < 80:
-				parents.append(s1.pop(0))
+				rand = random.randrange(0, totalTop)
+				for i in range(0, len(s1)):
+					count += s1[i].score
+					if count > rand:
+						parents.append(s1.pop(i))
+						break
 			else:
-				parents.append(s2.pop(0))
+				rand = random.randrange(0, totalBottom)
+				for i in range(0, len(s2)):
+					count += s2[i].score
+					if count > rand:
+						parents.append(s2.pop(i))
+						break
 
 	else:
 		for i in range(0, num):
@@ -158,10 +210,12 @@ def chooseParents(population, parentSelection, num):
 
 #returns a combination of two parents
 def combine(parents):
-	tree = parents[0].msPac.tree
-	tree = tree.combine(parents[1].msPac.tree)
-	# child = State.state(width, height, ghosts, msPac, pDensity)
-	return tree
+	tree1 = parents[0].msPac.tree
+	tree2 = parents[1].msPac.tree
+	tree1.combine(parents[1].msPac.tree)
+	tree2.combine(parents[0].msPac.tree)
+
+	return tree1, tree2
 
 #returns a mutation of one parent.
 def mutate(state):
