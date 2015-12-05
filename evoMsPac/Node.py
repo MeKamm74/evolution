@@ -77,8 +77,9 @@ class Node(object):
 			if rand == 0:
 				rand = random.randrange(0, len(functions))
 				self.value = functions[rand]
-				self.children.append(Node("DISTPILL"))
-				self.children.append(Node("DISTPILL"))
+				self.children = []
+				self.children.append(Node("DISTGHOST"))
+				self.children.append(Node("DISTGHOST"))
 				for child in self.children:
 					child.growNode(maxDepth-1)
 		

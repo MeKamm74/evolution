@@ -7,6 +7,7 @@ import State
 import time
 import datetime
 import random
+import copy
 #Returns the move for Ms. Pacman to make
 def chooseMove(moves, state, numGhost=-1):
 	if numGhost == -1:
@@ -20,21 +21,21 @@ def chooseMove(moves, state, numGhost=-1):
 				if tempState.rank > bestRank:
 					best = move
 					bestRank = tempState.rank
-			if move == "RIGHT":
+			elif move == "RIGHT":
 				tempState = state
 				tempState.msPac.locationX += 1
 				tempState.evaluateState()
 				if tempState.rank > bestRank:
 					best = move
 					bestRank = tempState.rank
-			if move == "UP":
+			elif move == "UP":
 				tempState = state
 				tempState.msPac.locationY -= 1
 				tempState.evaluateState()
 				if tempState.rank > bestRank:
 					best = move
 					bestRank = tempState.rank
-			if move == "DOWN":
+			elif move == "DOWN":
 				tempState = state
 				tempState.msPac.locationY += 1
 				tempState.evaluateState()
@@ -51,27 +52,31 @@ def chooseMove(moves, state, numGhost=-1):
 				tempState = state
 				tempState.ghosts[numGhost].locationX -= 1
 				tempState.evaluateGhostState(numGhost)
+				tempState.ghosts[numGhost].locationX += 1
 				if tempState.rank > bestRank:
 					best = move
 					bestRank = tempState.rank
-			if move == "RIGHT":
+			elif move == "RIGHT":
 				tempState = state
 				tempState.ghosts[numGhost].locationX += 1
 				tempState.evaluateGhostState(numGhost)
+				tempState.ghosts[numGhost].locationX -= 1
 				if tempState.rank > bestRank:
 					best = move
 					bestRank = tempState.rank
-			if move == "UP":
+			elif move == "UP":
 				tempState = state
 				tempState.ghosts[numGhost].locationY -= 1
 				tempState.evaluateGhostState(numGhost)
+				tempState.ghosts[numGhost].locationY += 1
 				if tempState.rank > bestRank:
 					best = move
 					bestRank = tempState.rank
-			if move == "DOWN":
+			elif move == "DOWN":
 				tempState = state
 				tempState.ghosts[numGhost].locationY += 1
 				tempState.evaluateGhostState(numGhost)
+				tempState.ghosts[numGhost].locationY -= 1
 				if tempState.rank > bestRank:
 					best = move
 					bestRank = tempState.rank
@@ -116,13 +121,40 @@ def runGame(state):
 	return state, tempWorld
 
 #Chooses Parents, combines or mutates them to create children, evaluates them, and adds them to the population
-def createChildren(populationMsPac, populationGhosts, genSize, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, parentSelection, width, height):
-	children = []
+def createChildren(populationMsPac, populationGhosts, genSize, genSizeGhost, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, pGhosts, parentSelection, parentSelectionGhosts, width, height):
+	ghostChildren = []
+	msPacChildren = []
+	i = 0
+
+	while i < genSizeGhost:
+		rand = random.randrange(0, 2)
+		if rand == 0 and i < genSizeGhost-1:
+			ghostParents = chooseParents(populationGhosts, parentSelectionGhosts, 2)
+			tree1, tree2 = combine(ghostParents)
+
+			ghost1 = Ghost.Ghost()
+			ghost1.tree = tree1
+			ghost2 = Ghost.Ghost()
+			ghost2.tree = tree2
+
+			ghostChildren.append(ghost1)
+			ghostChildren.append(ghost2)
+			i+=2
+
+		else:
+			ghostParents = chooseParents(populationGhosts, parentSelectionGhosts, 1)
+			tree = ghostParents[0].tree
+			ghost = Ghost.Ghost()
+			ghost.tree = tree
+			ghost = mutate(ghost)
+
+			ghostChildren.append(ghost)
+			i+=1
 	i = 0
 	while i < genSize:
 		#Choose Parents
 		rand = random.randrange(0, 2)
-		if rand == 0:
+		if rand == 0 and i < genSize-1:
 			msPacParents = chooseParents(populationMsPac, parentSelection, 2)
 			tree1, tree2 = combine(msPacParents)
 
@@ -131,117 +163,87 @@ def createChildren(populationMsPac, populationGhosts, genSize, bestOverallScore,
 			msPac2 = MsPac.MsPac()
 			msPac2.tree = tree2
 
-			ghostParents = chooseParents(populationGhosts, parentSelection, 2)
-			tree1, tree2 = combine(ghostParents)
-
-			ghost1 = Ghost.Ghost()
-			ghost1.tree = tree1
-			ghost2 = Ghost.Ghost()
-			ghost2.tree = tree2
-
-			ghosts1 = [ghost1]
-			ghosts2 = [ghost2]
-
-			for j in range(1, 3):
-				ghost = Ghost.Ghost()
-				ghost.tree = ghosts1[0].tree
-				ghosts1.append(ghost)
-
-				newGhost = Ghost.Ghost()
-				newGhost.tree = ghosts2[0].tree
-				ghosts2.append(newGhost)
-
-			child1 = State.State(width, height, ghosts1, msPac1, pDensity)
-			child2 = State.State(width, height, ghosts2, msPac2, pDensity)
-
-			child1.generateGrid(pDensity)
-			child1, tempWorld1 = runGame(child1)
-			child1 = penalty(child1, p, maxDepth)
-			child2.generateGrid(pDensity)
-			child2, tempWorld2 = runGame(child2)
-			child2 = penalty(child2, p, maxDepth)
-
-			child1.ghosts[0].score = child1.score * -1
-			child1.msPac.score = child1.score
-			populationGhosts.append(child1.ghosts[0])
-			populationMsPac.append(child1.msPac)
-
-			child2.ghosts[0].score = child2.score * -1
-			child2.msPac.score = child2.score
-			populationGhosts.append(child2.ghosts[0])
-			populationMsPac.append(child2.msPac)
-			if child1.score > bestOverallScore:
-				#Log the world file if best overall
-				bestOverallScore = child1.score
-				world = open(worldFile, 'w')
-				world.write(tempWorld1)
-				world.close() 
-
-				solution = open(solFile, 'w')
-				solution.write(child1.msPac.tree.printOut(1))
-				solution.write("\n\n")
-				solution.write(child1.ghosts[0].tree.printOut(1))
-				solution.close()
-
-			if child2.score > bestOverallScore:
-				#Log the world file if best overall
-				bestOverallScore = child2.score
-				world = open(worldFile, 'w')
-				world.write(tempWorld2)
-				world.close() 
-
-				solution = open(solFile, 'w')
-				solution.write(child2.msPac.tree.printOut(1))
-				solution.write("\n\n")
-				solution.write(child2.ghosts[0].tree.printOut(1))
-				solution.close()
-
+			msPacChildren.append(msPac1)
+			msPacChildren.append(msPac2)
 			i+=2
 
 		else:
 			parentsMsPac = chooseParents(populationMsPac, parentSelection, 1)
-			parentsGhosts = chooseParents(populationGhosts, parentSelection, 1)
 			tree = parentsMsPac[0].tree
 			msPac = MsPac.MsPac()
 			msPac.tree = tree
 			msPac = mutate(msPac)
 
-			tree = parentsGhosts[0].tree
-			ghost = Ghost.Ghost()
-			ghost.tree = tree
-			ghost = mutate(ghost)
-			ghosts = [ghost]
-
-			for j in range(1, 3):
-				newGhost = Ghost.Ghost()
-				newGhost.tree = ghosts[0].tree
-				ghosts.append(newGhost)
-
-			child = State.State(width, height, ghosts, msPac, pDensity)
-			child.generateGrid(pDensity)
-			child, tempWorld = runGame(child)
-			child = penalty(child, p, maxDepth)
-			
-			child.ghosts[0].score = child.score * -1
-			child.msPac.score = child.score
-			populationGhosts.append(child.ghosts[0])
-			populationMsPac.append(child.msPac)
-
-			if child.score > bestOverallScore:
-				#Log the world file if best overall
-				bestOverallScore = child.score
-				world = open(worldFile, 'w')
-				world.write(tempWorld)
-				world.close() 
-
-				solution = open(solFile, 'w')
-				solution.write(child.msPac.tree.printOut(1))
-				solution.write("\n\n")
-				solution.write(child.ghosts[0].tree.printOut(1))
-				solution.close()
-
+			msPacChildren.append(msPac)
 			i+=1
 
+	i = 0
+	if genSize >= genSizeGhost:
+		for i in range(0, genSize):
+			if i < genSizeGhost:
+				index = i
+			else:
+				index = random.randrange(0, len(ghostChildren))
+
+			ghosts = []
+			for j in range(0, 3):
+				ghost = Ghost.Ghost()
+				ghost.tree = ghostChildren[index].tree
+				ghosts.append(ghost)
+
+			state = State.State(width, height, ghosts, msPacChildren[i], pDensity)
+			state.generateGrid(pDensity)
+
+			state, tempWorld = runGame(state)
+			msPacChildren[i].score = state.score
+			if ghostChildren[index].score != 0:
+				ghostChildren[index].score = (ghostChildren[index].score + state.score*(-1))/2
+			else:
+				ghostChildren[index].score = state.score * -1
+
+			ghostChildren[index] = penalty(ghostChildren[index], pGhosts, maxDepth)
+			msPacChildren[i] = penalty(msPacChildren[i], p, maxDepth)
+			if msPacChildren[i].score > bestOverallScore:
+				world = open(worldFile, 'w')
+				world.write(tempWorld)
+				world.close()
+
+				bestOverallScore = msPacChildren[i].score
+
+	else:
+		for i in range(0, genSizeGhost):
+			if i < genSize:
+				index = i
+			else:
+				index = random.randrange(0, len(msPacChildren))
+
+			ghosts = []
+			for j in range(0, 3):
+				ghost = Ghost.Ghost()
+				ghost.tree = ghostChildren[i].tree
+				ghosts.append(ghost)
+
+			state = State.State(width, height, ghosts, msPacChildren[index], pDensity)
+			state.generateGrid(pDensity)
+
+			state, tempWorld = runGame(state)
+			if msPacChildren[index].score != 0:
+				msPacChildren[index].score = (msPacChildren[index].score + state.score)/2
+			else:
+				msPacChildren[index].score = state.score
+			ghostChildren[i].score = state.score * -1
+
+			ghostChildren[i] = penalty(ghostChildren[i], pGhosts, maxDepth)
+			msPacChildren[index] = penalty(msPacChildren[index], p, maxDepth)
+			if msPacChildren[index].score > bestOverallScore:
+				world = open(worldFile, 'w')
+				world.write(tempWorld)
+				world.close()
+
+				bestOverallScore = msPacChildren[index].score
+
+	populationGhosts.extend(ghostChildren)
+	populationMsPac.extend(msPacChildren)
 	return populationMsPac, populationGhosts, bestOverallScore
 
 #Returns a given number of parents using either overselection or fitness proportional selection.
@@ -260,46 +262,27 @@ def chooseParents(population, parentSelection, num):
 			x-=1
 			s2.append(population[x])
 
-		for i in range(0, num):
+		for j in range(0, num):
 			totalTop = totalFitness(s1)
 			totalBottom = totalFitness(s2)
 			count = 0
 			rand = random.randrange(1, 101)
 			if rand < 80 and len(s1) > 0:
-				if totalTop > 0:
-					rand = random.randrange(0, totalTop)
-					for i in range(0, len(s1)):
-						count += s1[i].score
-						if count > rand:
-							parents.append(s1.pop(i))
-							break
-
-				elif totalTop == 0:
+				if totalTop == 0:
 					rand = random.randrange(0, len(s1))
 					parents.append(s1.pop(rand))
-					break
-
-				else:
+				else:	
 					rand = random.randrange(0, abs(totalTop))
 					for i in range(0, len(s1)):
 						count += abs(s1[i].score)
 						if count > rand:
 							parents.append(s1.pop(i))
 							break
-			else:
-				if totalBottom >= 0:
-					rand = random.randrange(0, totalBottom)
-					for i in range(0, len(s2)):
-						count += s2[i].score
-						if count > rand:
-							parents.append(s2.pop(i))
-							break
 
-				elif totalBottom == 0:
+			else:
+				if totalBottom == 0:
 					rand = random.randrange(0, len(s2))
 					parents.append(s2.pop(rand))
-					break
-
 				else:
 					rand = random.randrange(0, abs(totalBottom))
 					for i in range(0, len(s2)):
@@ -309,7 +292,7 @@ def chooseParents(population, parentSelection, num):
 							break
 
 	else:
-		for i in range(0, num):
+		for j in range(0, num):
 			total = totalFitness(population)
 			count = 0
 			if total == 0:
@@ -348,8 +331,8 @@ def mutate(child):
 
 #Runs survival selection till population is back to size, either using k-tournament or truncation.
 def cutLosers(population, size, k):
+	population.sort(key=lambda x: x.score)
 	if k == 0:
-		population.sort(key=lambda x: x.score)
 		while len(population) > size:
 			population.pop(0)
 
@@ -365,16 +348,16 @@ def cutLosers(population, size, k):
 	return population
 
 #Penalizes the score of a completed state if the controller it uses is too large.
-def penalty(state, p, maxDepth):
+def penalty(child, p, maxDepth):
 	threshold = 0
 	for i in range(0, maxDepth):
 		threshold+=i
 
-	size = len(state.msPac.tree.wholeTree())
+	size = len(child.tree.wholeTree())
 	if size > threshold:
-		state.score -= p*(size - threshold)
+		child.score -= p*(size - threshold)
 
-	return state
+	return child
 
 #Returns sum of all fitnesses in the population
 def totalFitness(population):
@@ -385,7 +368,7 @@ def totalFitness(population):
 
 #Returns the best fitness in the population
 def bestFitness(population):
-	best = 0
+	best = -9999999
 	for state in population:
 		if state.score > best:
 			best = state.score
@@ -409,6 +392,15 @@ def worstIndex(population):
 			index = i
 	return index
 
+def bestIndex(population):
+	best = population[0].score
+	index = 0
+	for i in range(1, len(population)):
+		if population[i].score > best:
+			best = population[i].score
+			index = i
+	return index
+
 #Main Script
 def main():
 	#Checks arguments for given config file, defaults to 1.cfg
@@ -424,10 +416,15 @@ def main():
 	seed = int(config.readline().split()[1])
 	popSize = int(config.readline().split()[1])
 	genSize = int(config.readline().split()[1])
+	popSizeGhost = int(config.readline().split()[1])
+	genSizeGhost = int(config.readline().split()[1])
 	maxDepth = int(config.readline().split()[1])
 	parentSelection = config.readline().split()[1]
+	parentSelectionGhosts = config.readline().split()[1]
 	k = int(config.readline().split()[1])
+	kGhosts = int(config.readline().split()[1])
 	p = int(config.readline().split()[1])
+	pGhosts = int(config.readline().split()[1])
 	numEvals = int(config.readline().split()[1])
 	runs = int(config.readline().split()[1])
 	n = int(config.readline().split()[1])
@@ -467,13 +464,12 @@ def main():
 		log.write("\nUsing N-Convergence, n: " + str(n))
 	log.write("\nSolution File: " + str(solFile))
 	log.write("\nWorld File: " + str(worldFile))
-	log.write("\n\nResults Log")
-	log.write("\n---------------\n\n")
+	log.write("\n\nResults Log\n\n")
 
 	#begin runs
 	bestOverallScore = 0
-	for i in range(0, runs):
-		log.write("Run " + str(i+1) + "\n")
+	for run in range(0, runs):
+		log.write("Run " + str(run+1) + "\n")
 		bestScore = 0
 		evals = 0
 
@@ -481,78 +477,87 @@ def main():
 		#First full trees
 		populationGhosts = []
 		populationMsPac = []
+
+		for j in range(0, popSizeGhost/2):
+			ghost = Ghost.Ghost()
+			ghost.generateFullTree(maxDepth)
+			populationGhosts.append(ghost)
+
+		for j in range(popSizeGhost/2, popSizeGhost):
+			ghost = Ghost.Ghost()
+			ghost.generateGrowTree(maxDepth)
+			populationGhosts.append(ghost)
+
 		for j in range(0, popSize/2):
 			msPac = MsPac.MsPac()
 			msPac.generateFullTree(maxDepth)
 			populationMsPac.append(msPac)
-
-			ghost = Ghost.Ghost()
-			ghost.generateFullTree(maxDepth)
-			ghosts = [ghost]
-			for i in range(1, 3):
-				newGhost = Ghost.Ghost()
-				newGhost.tree = ghosts[0].tree
-				ghosts.append(newGhost)
-
-			state = State.State(width, height, ghosts, msPac, pDensity)
-			state.generateGrid(pDensity)
-
-			state, tempWorld = runGame(state)
-			state.msPac.score = state.score
-			state.ghosts[0].score = state.score * -1
-
-			populationMsPac.append(state.msPac)
-			populationGhosts.append(state.ghosts[0])
-
-			if state.score > bestOverallScore:
-				#Log the world file if best overall
-				bestOverallScore = state.score
-				world = open(worldFile, 'w')
-				world.write(tempWorld)
-				world.close() 
-
-				solution = open(solFile, 'w')
-				solution.write(state.msPac.tree.printOut(1))
-				solution.write("\n\n")
-				solution.write(state.ghosts[0].tree.printOut(1))
-				solution.close()
 
 		#Then Grow trees
 		for j in range(popSize/2, popSize):
 			msPac = MsPac.MsPac()
 			msPac.generateGrowTree(maxDepth)
 			populationMsPac.append(msPac)
-			
-			ghost = Ghost.Ghost()
-			ghost.generateGrowTree(maxDepth)
-			ghosts = [ghost]
-			for i in range(1, 3):
-				newGhost = Ghost.Ghost()
-				newGhost.tree = ghosts[0].tree
-				ghosts.append(newGhost)
 
-			state = State.State(width, height, ghosts, msPac, pDensity)
-			state.generateGrid(pDensity)
+		if popSize >= popSizeGhost:
+			for i in range(0, popSize):
+				if i < popSizeGhost:
+					index = i
+				else:
+					index = random.randrange(0, len(populationGhosts))
 
-			state, tempWorld = runGame(state)
-			state.msPac.score = state.score
-			state.ghosts[0].score = state.score * -1
+				ghosts = []
+				for j in range(0, 3):
+					ghost = Ghost.Ghost()
+					ghost.tree = populationGhosts[index].tree
+					ghosts.append(ghost)
 
-			populationMsPac.append(state.msPac)
-			populationGhosts.append(state.ghosts[0])
+				state = State.State(width, height, ghosts, populationMsPac[i], pDensity)
+				state.generateGrid(pDensity)
 
-			if state.score > bestOverallScore:
-				#Log the world file if best overall
-				bestOverallScore = state.score
-				world = open(worldFile, 'w')
-				world.write(tempWorld)
-				world.close() 
+				state, tempWorld = runGame(state)
+				populationMsPac[i].score = state.score
+				if populationGhosts[index].score > 0:
+					populationGhosts[index].score = (populationGhosts[index] + state.score*(-1))/2
+				else:
+					populationGhosts[index].score = state.score * -1
 
-				solution = open(solFile, 'w')
-				solution.write(state.msPac.tree.printOut(1))
-				solution.write("\n\n")
-				solution.write(state.ghosts[0].tree.printOut(1))
-				solution.close()
+				if populationMsPac[i].score > bestOverallScore:
+					#Log the world file if best overall
+					bestOverallScore = populationMsPac[i].score
+					world = open(worldFile, 'w')
+					world.write(tempWorld)
+					world.close() 
+
+		else:
+			for i in range(0, popSizeGhost):
+				if i < popSize:
+					index = i
+				else:
+					index = random.randrange(0, len(populationMsPac))
+
+				ghosts = []
+				for j in range(0, 3):
+					ghost = Ghost.Ghost()
+					ghost.tree = populationGhosts[i].tree
+					ghosts.append(ghost)
+
+				state = State.State(width, height, ghosts, populationMsPac[index], pDensity)
+				state.generateGrid(pDensity)
+
+				state, tempWorld = runGame(state)
+				if populationMsPac[index].score > 0:
+					populationMsPac[index].score = (populationMsPac[index].score + state.score)/2
+				else:
+					populationMsPac[index].score = state.score
+				populationGhosts[index].score = state.score * -1
+
+				if populationMsPac[index].score > bestOverallScore:
+					#Log the world file if best overall
+					bestOverallScore = populationMsPac[index].score
+					world = open(worldFile, 'w')
+					world.write(tempWorld)
+					world.close() 
 
 		#Calculates bests and averages for initial population
 		evals += len(populationMsPac)
@@ -566,13 +571,16 @@ def main():
 		#Runs a generation while termination criteria is not met.
 		while not terminate:
 			#Create Children
-			populationMsPac, populationGhosts, bestOverallScore = createChildren(populationMsPac, populationGhosts, genSize, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, parentSelection, width, height)
+			populationMsPac, populationGhosts, bestOverallScore = createChildren(populationMsPac, populationGhosts, genSize, genSizeGhost, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, pGhosts, parentSelection, parentSelectionGhosts, width, height)
 			
 			#Survival Selection
 			populationMsPac = cutLosers(populationMsPac, popSize, k)
-			populationGhosts = cutLosers(populationGhosts, popSize, k)
+			populationGhosts = cutLosers(populationGhosts, popSizeGhost, kGhosts)
 			#Update number of evals
-			evals += genSize
+			if genSizeGhost > genSize:
+				evals += genSizeGhost
+			else:
+				evals += genSize
 
 			#Log
 			avgScore = averageFitness(populationMsPac)
@@ -591,7 +599,16 @@ def main():
 			#Checks number of evals
 			if evals >= numEvals:
 				terminate = True
+
 		log.write("\n")
+
+		x = bestIndex(populationMsPac)
+		y = bestIndex(populationGhosts)
+		solution = open(solFile, 'w')
+		solution.write(populationMsPac[x].tree.printOut(1))
+		solution.write("\n\n")
+		solution.write(populationGhosts[y].tree.printOut(1))
+		solution.close()
 	log.close()
 
 if __name__ == "__main__":

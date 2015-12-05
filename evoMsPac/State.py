@@ -84,13 +84,13 @@ class State(object):
 			if temp > self.distanceGhost:
 				self.distanceGhost = temp
 
-		for i in range(0, len(self.ghosts)):
-			self.ghosts[i].distanceGhost = 10000000
-			for j in range(0, len(self.ghosts)):
-				if i != j:
-					temp = abs(self.ghosts[i].locationX - self.ghosts[j].locationX) + abs(self.ghosts[i].locationY - self.ghosts[j].locationY)
-					if temp < self.ghosts[i].distanceGhost:
-						self.ghosts[i].distanceGhost = temp
+		# for i in range(0, len(self.ghosts)):
+		# 	self.ghosts[i].distanceGhost = 10000000
+		# 	for j in range(0, len(self.ghosts)):
+		# 		if i != j:
+		# 			temp = abs(self.ghosts[i].locationX - self.ghosts[j].locationX) + abs(self.ghosts[i].locationY - self.ghosts[j].locationY)
+		# 			if temp < self.ghosts[i].distanceGhost:
+		# 				self.ghosts[i].distanceGhost = temp
 
 		self.score = int((float(self.numEaten)/self.totalPills)*100)
 		self.time-=1
@@ -116,6 +116,15 @@ class State(object):
 		self.rank = self.evaluate(self.msPac.tree)
 
 	def evaluateGhostState(self, numGhost):
+		
+		self.ghosts[numGhost].distancePac = abs(self.msPac.locationX - self.ghosts[numGhost].locationX) + abs(self.msPac.locationY - self.ghosts[numGhost].locationY)
+		self.ghosts[numGhost].distanceGhost = 99999999
+		for i in range(0, len(self.ghosts)):
+			if i != numGhost:
+				temp = abs(self.ghosts[i].locationX - self.ghosts[numGhost].locationX) + abs(self.ghosts[i].locationY - self.ghosts[numGhost].locationY)
+				if temp < self.ghosts[numGhost].distanceGhost:
+					self.ghosts[numGhost].distanceGhost = temp
+			
 		self.rank = self.evaluate(self.ghosts[numGhost].tree, numGhost)
 
 	def evaluate(self, tree, numGhost=-1):
