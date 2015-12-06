@@ -121,7 +121,7 @@ def runGame(state):
 	return state, tempWorld
 
 #Chooses Parents, combines or mutates them to create children, evaluates them, and adds them to the population
-def createChildren(populationMsPac, populationGhosts, genSize, genSizeGhost, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, pGhosts, parentSelection, parentSelectionGhosts, width, height):
+def createChildren(populationMsPac, populationGhosts, genSize, genSizeGhost, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, pGhosts, parentSelection, parentSelectionGhosts, width, height, run, runs):
 	ghostChildren = []
 	msPacChildren = []
 	i = 0
@@ -203,7 +203,7 @@ def createChildren(populationMsPac, populationGhosts, genSize, genSizeGhost, bes
 
 			ghostChildren[index] = penalty(ghostChildren[index], pGhosts, maxDepth)
 			msPacChildren[i] = penalty(msPacChildren[i], p, maxDepth)
-			if msPacChildren[i].score > bestOverallScore:
+			if msPacChildren[i].score > bestOverallScore and run == runs-1:
 				world = open(worldFile, 'w')
 				world.write(tempWorld)
 				world.close()
@@ -235,7 +235,7 @@ def createChildren(populationMsPac, populationGhosts, genSize, genSizeGhost, bes
 
 			ghostChildren[i] = penalty(ghostChildren[i], pGhosts, maxDepth)
 			msPacChildren[index] = penalty(msPacChildren[index], p, maxDepth)
-			if msPacChildren[index].score > bestOverallScore:
+			if msPacChildren[index].score > bestOverallScore and run == runs-1:
 				world = open(worldFile, 'w')
 				world.write(tempWorld)
 				world.close()
@@ -452,14 +452,24 @@ def main():
 	log.write("\nGeneration Size: " + str(genSize))
 	log.write("\nMax Tree Depth: " + str(maxDepth))
 	if parentSelection == "OVERSELECTION":
-		log.write("\nUsing Overselection Parent Selection")
+		log.write("\nUsing Overselection Parent Selection for Ms Pacman")
 	else:
-		log.write("\nUsing Fitness Proportional Parent Selection")
+		log.write("\nUsing Fitness Proportional Parent Selection for Ms Pacman")
+	if parentSelectionGhosts == "OVERSELECTION":
+		log.write("\nUsing Overselection Parent Selection for Ghosts")
+	else:
+		log.write("\nUsing Fitness Proportional Parent Selection for Ghosts")
 	if k != 0:
-		log.write("\nUsing K-Tournament Survivor Selection, k: " + str(k))
+		log.write("\nUsing K-Tournament Survivor Selection for Ms Pacman, k: " + str(k))
 	else:
-		log.write("\nUsing Truncation Survivor Selection")
-	log.write("\nParsimony Pressure Constant: " + str(p))
+		log.write("\nUsing Truncation Survivor Selection for Ms Pacman")
+
+	if kGhosts != 0:
+		log.write("\nUsing K-Tournament Survivor Selection for Ghosts, k: " + str(kGhosts))
+	else:
+		log.write("\nUsing Truncation Survivor Selection for Ghosts")
+	log.write("\nParsimony Pressure Constant for Ms Pacman: " + str(p))
+	log.write("\nParsimony Pressure Constant for Ghosts: " + str(pGhosts))
 	if n != 0:
 		log.write("\nUsing N-Convergence, n: " + str(n))
 	log.write("\nSolution File: " + str(solFile))
@@ -522,7 +532,7 @@ def main():
 				else:
 					populationGhosts[index].score = state.score * -1
 
-				if populationMsPac[i].score > bestOverallScore:
+				if populationMsPac[i].score > bestOverallScore and run == runs-1:
 					#Log the world file if best overall
 					bestOverallScore = populationMsPac[i].score
 					world = open(worldFile, 'w')
@@ -552,7 +562,7 @@ def main():
 					populationMsPac[index].score = state.score
 				populationGhosts[index].score = state.score * -1
 
-				if populationMsPac[index].score > bestOverallScore:
+				if populationMsPac[index].score > bestOverallScore and run == runs-1:
 					#Log the world file if best overall
 					bestOverallScore = populationMsPac[index].score
 					world = open(worldFile, 'w')
@@ -571,7 +581,7 @@ def main():
 		#Runs a generation while termination criteria is not met.
 		while not terminate:
 			#Create Children
-			populationMsPac, populationGhosts, bestOverallScore = createChildren(populationMsPac, populationGhosts, genSize, genSizeGhost, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, pGhosts, parentSelection, parentSelectionGhosts, width, height)
+			populationMsPac, populationGhosts, bestOverallScore = createChildren(populationMsPac, populationGhosts, genSize, genSizeGhost, bestOverallScore, worldFile, solFile, pDensity, maxDepth, p, pGhosts, parentSelection, parentSelectionGhosts, width, height, run, runs)
 			
 			#Survival Selection
 			populationMsPac = cutLosers(populationMsPac, popSize, k)

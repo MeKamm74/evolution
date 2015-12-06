@@ -84,14 +84,6 @@ class State(object):
 			if temp > self.distanceGhost:
 				self.distanceGhost = temp
 
-		# for i in range(0, len(self.ghosts)):
-		# 	self.ghosts[i].distanceGhost = 10000000
-		# 	for j in range(0, len(self.ghosts)):
-		# 		if i != j:
-		# 			temp = abs(self.ghosts[i].locationX - self.ghosts[j].locationX) + abs(self.ghosts[i].locationY - self.ghosts[j].locationY)
-		# 			if temp < self.ghosts[i].distanceGhost:
-		# 				self.ghosts[i].distanceGhost = temp
-
 		self.score = int((float(self.numEaten)/self.totalPills)*100)
 		self.time-=1
 
